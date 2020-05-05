@@ -6,7 +6,7 @@ import torch
 from torch import optim
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
-from torch.nn.utils import clip_grad_norm, clip_grad_norm_
+from torch.nn.utils import clip_grad_norm_
 import argparse
 import logging
 import sys
@@ -30,13 +30,12 @@ if __name__ == "__main__":
     parser.add_argument('--weight_decay', type=float, default=0.1)
     parser.add_argument("--checkpoint_interval", type=int, default=20)
     parser.add_argument("--num_epoch", type=int, default=200)
-    parser.add_argument("--train_filename", type=str, default="tsp_10_test_sample.txt")
+    parser.add_argument("--train_filename", type=str, default="../tsp_10_test_sample.txt")
     parser.add_argument("--model_file", type=str, default=None)
     parser.add_argument("--log_dir", type=str, default="./log")
 
     args = parser.parse_args()
 
-    # Pytroch configuration
     if args.gpu >= 0 and torch.cuda.is_available():
         args.use_cuda = True
         torch.cuda.device(args.gpu)

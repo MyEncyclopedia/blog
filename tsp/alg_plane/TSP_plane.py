@@ -21,13 +21,17 @@ class TSPSolver:
     parent: List[List[int]]
     tour: List[int]
     dist: float
+    dep: int
 
     def __init__(self, g: Graph):
         self.g = g
         self.dp = [[-1.0 for c in range(g.v_num)] for r in range(1 << g.v_num)]
         self.parent = [[-1 for c in range(g.v_num)] for r in range(1 << g.v_num)]
+        self.INT_BIN_FORMAT = '{0:0' + str(g.v_num) + 'b}'
+        self.DEBUG = False
 
     def solve(self):
+        self.dep = 0
         self.dist = self._recurse(0, 0)
         self._form_tour()
 
@@ -38,14 +42,18 @@ class TSPSolver:
         :param state:
         :return: -1 means INF
         """
+        self.dep += 1
         dp = self.dp
         edges = self.g.edges
+        if self.DEBUG: print('>' + '  ' * self.dep + 'state={}, v={}:  {:.2f}'.format(self.INT_BIN_FORMAT.format(state), v, dp[state][v]))
 
         if dp[state][v] >= 0.0:
+            self.dep -= 1
             return dp[state][v]
 
         if (state == (1 << self.g.v_num) - 1) and (v == 0):
             dp[state][v] = 0.0
+            self.dep -= 1
             return dp[state][v]
 
         ret: float = FLOAT_INF
@@ -58,6 +66,8 @@ class TSPSolver:
                     u_min = u
         dp[state][v] = ret
         self.parent[state][v] = u_min
+        if self.DEBUG: print('>' + '  ' * self.dep + 'state={}, v={} -> u={}:  {:.2f}'.format(self.INT_BIN_FORMAT.format(state), v, u_min, dp[state][v]))
+        self.dep -= 1
         return ret
 
     def _form_tour(self):
@@ -103,11 +113,14 @@ def main(line: str):
         dist: float = math.sqrt(diff_x * diff_x + diff_y * diff_y)
         output_dist += dist
 
-    assert tsp.tour == output_tour
-    assert abs(tsp.dist - output_dist) < 10e-5
+    passed = abs(tsp.dist - output_dist) < 10e-5
+    if passed:
+        print(f'passed dist={tsp.tour}')
+    else:
+        print(f'Min Tour Distance = {output_dist}, Computed Tour Distance = {tsp.dist}, Expected Tour = {output_tour}, Result = {tsp.tour}')
 
 
 if __name__ == "__main__":
-    line = '0.678669 0.091371 0.881432 0.856994 0.030809 0.079008 0.810585 0.128031 0.951074 0.864690 0.751941 0.333851 0.711105 0.622832 0.854909 0.376740 0.255645 0.829741 0.024269 0.003400 output 1 10 3 9 2 5 7 8 6 4 1 '
-
-    main(line)
+    with open('../tsp_10_test_sample.txt') as fp:
+        for line in fp.readlines():
+            main(line)

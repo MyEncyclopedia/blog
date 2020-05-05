@@ -53,7 +53,7 @@ public class Main {
             for (int u = 0; u < g.V_NUM; u++) {
                 if ((state & (1 << u)) == 0) {
                     long s = recurse(state | 1 << u, u);
-                    System.out.println("" + Integer.toBinaryString(state | 1 << u) + "," + u + " = " + s);
+                    // System.out.println("" + Integer.toBinaryString(state | 1 << u) + "," + u + " = " + s);
                     res = Math.min(res, s + g.edges[v][u]);
                 }
             }

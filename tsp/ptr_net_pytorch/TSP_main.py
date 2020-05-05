@@ -30,7 +30,7 @@ if __name__ == "__main__":
     parser.add_argument('--weight_decay', type=float, default=0.1)
     parser.add_argument("--checkpoint_interval", type=int, default=20)
     parser.add_argument("--num_epoch", type=int, default=200)
-    parser.add_argument("--train_filename", type=str, default="/Users/frank/Desktop/jikecloud/PTR_NETS/tsp_20_test.txt")
+    parser.add_argument("--train_filename", type=str, default="tsp_10_test_sample.txt")
     parser.add_argument("--model_file", type=str, default=None)
     parser.add_argument("--log_dir", type=str, default="./log")
 

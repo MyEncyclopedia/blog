@@ -22,7 +22,10 @@ class TSPSolver:
         self.g = g
         self.dp = [[None for c in range(g.v_num)] for r in range(1 << g.v_num)]
 
-    def recurse(self, v: int, state: int) -> int:
+    def solve(self) -> int:
+        return self._recurse(0, 0)
+
+    def _recurse(self, v: int, state: int) -> int:
         """
 
         :param v:
@@ -42,7 +45,7 @@ class TSPSolver:
         ret: int = INT_INF
         for u in range(self.g.v_num):
             if (state & (1 << u)) == 0:
-                s: int = self.recurse(u, state | 1 << u)
+                s: int = self._recurse(u, state | 1 << u)
                 if s != INT_INF and edges[v][u] != INT_INF:
                     if ret == INT_INF:
                         ret = s + edges[v][u]
@@ -60,7 +63,7 @@ def main():
         g.setDist(src, dest, dist)
 
     tsp: TSPSolver = TSPSolver(g)
-    print(tsp.recurse(0, 0))
+    print(tsp.solve())
 
 
 if __name__ == "__main__":

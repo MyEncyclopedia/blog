@@ -37,25 +37,16 @@ def sequence_mask(lengths: Tensor, max_len: int = None) -> Tensor:
 
 
 class Attention(nn.Module):
-    attn_type: str
-    linear: nn.Linear
+    linear_out: nn.Linear
 
-    def __init__(self, attn_type: str, dim: int):
+    def __init__(self, dim: int):
         """
         Attention layer
         Args:
-            attn_type: attention type ['dot', 'general']
             dim: input dimension size
         """
         super(Attention, self).__init__()
-        self.attn_type = attn_type
         self.linear_out = nn.Linear(dim * 2, dim, bias=False)
-        if self.attn_type == 'general':
-            self.linear = nn.Linear(dim, dim, bias=False)
-        elif self.attn_type == 'dot':
-            pass
-        else:
-            raise NotImplementedError()
 
     def score(self, src: Tensor, target: Tensor) -> Tensor:
         """
@@ -72,14 +63,9 @@ class Attention(nn.Module):
         batch_size, src_len, dim = src.size()
         _, target_len, _ = target.size()
 
-        if self.attn_type in ['general', 'dot']:
-            target_ = target
-            if self.attn_type == 'general':
-                target_ = self.linear(target_)
-            src_ = src.transpose(1, 2)
-            return torch.bmm(target_, src_)
-        else:
-            raise NotImplementedError()
+        target_ = target
+        src_ = src.transpose(1, 2)
+        return torch.bmm(target_, src_)
 
     def forward(self, src: Tensor, target: Tensor, src_lengths: Tensor = None) -> Tuple[Tensor, Tensor]:
         """
@@ -92,11 +78,7 @@ class Attention(nn.Module):
         Returns:
 
         """
-        if target.dim() == 2:
-            one_step = True
-            src = src.unsqueeze(1)
-        else:
-            one_step = False
+        assert target.dim() == 3
 
         batch_size, src_len, dim = src.size()
         _, target_len, _ = target.size()
@@ -117,10 +99,6 @@ class Attention(nn.Module):
 
         concat_c = torch.cat([c, target], -1)
         attn_h = self.linear_out(concat_c)
-
-        if one_step:
-            attn_h = attn_h.squeeze(1)
-            align_score = align_score.squeeze(1)
 
         return attn_h, align_score
 
@@ -170,7 +148,7 @@ class PointerNetRNNDecoder(nn.Module):
             rnn_hidden_size = hidden_size
         self.rnn = rnn_init(rnn_type, input_size=input_size, hidden_size=rnn_hidden_size, bidirectional=bidirectional,
                             num_layers=num_layers, dropout=dropout)
-        self.attention = Attention("dot", hidden_size)
+        self.attention = Attention(hidden_size)
 
     def forward(self, target: Tensor, memory_bank: Tensor, hidden: Tuple[Tensor],
                 memory_lengths: Tensor = None) -> Tensor:

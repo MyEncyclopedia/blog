@@ -28,21 +28,21 @@ class TSPDataset(Dataset):
         with open(filename, 'r') as f:
             data = []
             for line in f:
-                input, output = line.strip().split('output')
-                input = list(map(float, input.strip().split(' ')))
-                output = list(map(int, output.strip().split(' ')))
+                input_raw, output_raw = line.strip().split('output')
+                input_raw = list(map(float, input_raw.strip().split(' ')))
+                output_raw = list(map(int, output_raw.strip().split(' ')))
                 # Add START token
                 output_in = copy(self.START)
                 output_out = []
-                for idx in output:
-                    output_in += input[2 * (idx - 1): 2 * idx]
+                for idx in output_raw:
+                    output_in += input_raw[2 * (idx - 1): 2 * idx]
                     output_out += [idx]
                 # Add END token
                 output_out += [0]
 
                 # Padding input
-                input_len = len(input) // 2
-                input = self.START + input
+                input_len = len(input_raw) // 2
+                input = self.START + input_raw
                 input_len += 1
                 # Special START token
                 assert self.max_in_seq_len + 1 >= input_len
@@ -51,7 +51,7 @@ class TSPDataset(Dataset):
                 input = np.array(input).reshape([-1, 2])  # shape = (1 + num_points, 2)
                 input_len = np.array([input_len])         # 1 + num_points
                 # Padding output
-                output_len = len(output) + 1
+                output_len = len(output_raw) + 1
                 for i in range(self.max_out_seq_len + 1 - output_len):
                     output_in += self.START
                 output_in = np.array(output_in).reshape([-1, 2]) # shape = (max_out_seq_len + 1, 2)

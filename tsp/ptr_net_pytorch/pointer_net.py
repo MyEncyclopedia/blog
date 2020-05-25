@@ -64,7 +64,7 @@ class Attention(nn.Module):
         src_ = src.transpose(1, 2)
         return torch.bmm(target_, src_)
 
-    def forward(self, src: Tensor, target: Tensor, src_lengths: Tensor = None) -> Tuple[Tensor, Tensor]:
+    def forward(self, src: Tensor, target: Tensor, src_lengths: Tensor) -> Tuple[Tensor, Tensor]:
         """
 
         Args:
@@ -82,12 +82,11 @@ class Attention(nn.Module):
 
         align_score = self.score(src, target)
 
-        if src_lengths is not None:
-            mask = sequence_mask(src_lengths)
-            # (batch_size, max_len) -> (batch_size, 1, max_len)
-            # so mask can broadcast
-            mask = mask.unsqueeze(1)
-            align_score.data.masked_fill_(~mask, -float('inf'))
+        mask = sequence_mask(src_lengths)
+        # (batch_size, max_len) -> (batch_size, 1, max_len)
+        # so mask can broadcast
+        mask = mask.unsqueeze(1)
+        align_score.data.masked_fill_(~mask, -float('inf'))
 
         # normalize weights
         align_score = F.softmax(align_score, -1)
@@ -123,8 +122,8 @@ class RNNEncoder(nn.Module):
         self.rnn = rnn_init(rnn_type, input_size=input_size, hidden_size=hidden_size, bidirectional=bidirectional,
                             num_layers=num_layers, dropout=dropout)
 
-    def forward(self, src: Tensor, lengths: Tensor = None, hidden: Tensor = None) -> Tuple[Tensor, Tensor]:
-        lengths = lengths.view(-1).tolist()
+    def forward(self, src: Tensor, src_lengths: Tensor, hidden: Tensor = None) -> Tuple[Tensor, Tensor]:
+        lengths = src_lengths.view(-1).tolist()
         packed_src = pack_padded_sequence(src, lengths)
         memory_bank, hidden_final = self.rnn(packed_src, hidden)
         memory_bank = pad_packed_sequence(memory_bank)[0]

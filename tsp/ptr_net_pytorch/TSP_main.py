@@ -61,6 +61,8 @@ if __name__ == "__main__":
 
     # Init model
     model: PointerNet = PointerNet("LSTM", True, args.num_layers, 2, args.rnn_hidden_size, 0.0)
+    # from torchviz import make_dot, make_dot_from_trace
+    # make_dot(model, params=dict(model.named_parameters()))
     pointer_net_loss: PointerNetLoss = PointerNetLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 

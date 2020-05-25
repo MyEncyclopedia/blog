@@ -5,8 +5,8 @@ import torch
 from torch import nn
 from torch import Tensor
 from torch.autograd import Variable
-from torch.nn.utils.rnn import pack_padded_sequence as pack
-from torch.nn.utils.rnn import pad_packed_sequence as unpack
+from torch.nn.utils.rnn import pack_padded_sequence
+from torch.nn.utils.rnn import pad_packed_sequence
 import torch.nn.functional as F
 
 
@@ -30,10 +30,7 @@ def sequence_mask(lengths: Tensor, max_len: int = None) -> Tensor:
 
     batch_size = lengths.numel()
     max_len = max_len or lengths.max()
-    return (torch.arange(0, max_len)
-            .type_as(lengths)
-            .repeat(batch_size, 1)
-            .lt(lengths))
+    return (torch.arange(0, max_len).type_as(lengths).repeat(batch_size, 1).lt(lengths))
 
 
 class Attention(nn.Module):
@@ -128,9 +125,9 @@ class RNNEncoder(nn.Module):
 
     def forward(self, src: Tensor, lengths: Tensor = None, hidden: Tensor = None) -> Tuple[Tensor, Tensor]:
         lengths = lengths.view(-1).tolist()
-        packed_src = pack(src, lengths)
+        packed_src = pack_padded_sequence(src, lengths)
         memory_bank, hidden_final = self.rnn(packed_src, hidden)
-        memory_bank = unpack(memory_bank)[0]
+        memory_bank = pad_packed_sequence(memory_bank)[0]
         return memory_bank, hidden_final
 
 
@@ -153,11 +150,9 @@ class PointerNetRNNDecoder(nn.Module):
     def forward(self, target: Tensor, memory_bank: Tensor, hidden: Tuple[Tensor],
                 memory_lengths: Tensor = None) -> Tensor:
         rnn_output, hidden_final = self.rnn(target, hidden)
-        # Attention
         memory_bank = memory_bank.transpose(0, 1)
         rnn_output = rnn_output.transpose(0, 1)
         attn_h, align_score = self.attention(memory_bank, rnn_output, memory_lengths)
-
         return align_score
 
 

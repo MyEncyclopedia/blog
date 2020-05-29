@@ -1,5 +1,6 @@
+import datetime
 import math
-from typing import List
+from typing import List, Tuple
 
 FLOAT_INF = float("inf")
 
@@ -103,15 +104,8 @@ def main(line: str):
     tsp: TSPSolver = TSPSolver(g)
     tsp.solve()
 
-    output_dist: float = 0.0
     output_tour = list(map(lambda x: int(x) - 1, output.split(' ')))
-    for v in range(1, len(output_tour)):
-        pre_v = output_tour[v-1]
-        curr_v = output_tour[v]
-        diff_x = coordinates[pre_v][0] - coordinates[curr_v][0]
-        diff_y = coordinates[pre_v][1] - coordinates[curr_v][1]
-        dist: float = math.sqrt(diff_x * diff_x + diff_y * diff_y)
-        output_dist += dist
+    output_dist: float = dist_tour(coordinates, output_tour)
 
     passed = abs(tsp.dist - output_dist) < 10e-5
     if passed:
@@ -119,8 +113,19 @@ def main(line: str):
     else:
         print(f'Min Tour Distance = {output_dist}, Computed Tour Distance = {tsp.dist}, Expected Tour = {output_tour}, Result = {tsp.tour}')
 
+def dist_tour(coordinates: List[Tuple[float, float]], tour: List[int]) -> float:
+    output_dist: float = 0.0
+    for v in range(1, len(tour)):
+        pre_v = tour[v-1]
+        curr_v = tour[v]
+        diff_x = coordinates[pre_v][0] - coordinates[curr_v][0]
+        diff_y = coordinates[pre_v][1] - coordinates[curr_v][1]
+        dist: float = math.sqrt(diff_x * diff_x + diff_y * diff_y)
+        output_dist += dist
+    return output_dist
 
 if __name__ == "__main__":
     with open('../tsp_10_test_sample.txt') as fp:
         for line in fp.readlines():
             main(line)
+

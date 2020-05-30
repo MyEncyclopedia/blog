@@ -6,7 +6,8 @@ from copy import copy
 
 
 class TSPDataset(Dataset):
-    data: List[Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]
+    "each data item of form (input, input_len, output_in, output_out, output_len)"
+    data: List[Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]]
 
     def __init__(self, filename: str, max_in_seq_len: int, max_out_seq_len: int):
         """

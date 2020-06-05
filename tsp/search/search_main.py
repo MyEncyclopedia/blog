@@ -93,7 +93,7 @@ def search_beam(initial: List, transition: List, L: int, K: int) -> Tuple[float,
             prob, route, prev_v = item.prob, item.route, item.last_v
             k -= 1
             for v in range(N):
-                nextItem = PQItem(prob = prob * transition[prev_v][v], route = route + str(v))
+                nextItem = PQItem(prob * transition[prev_v][v], route + str(v))
                 next_q.put(nextItem)
 
     max_item = next_q.get()

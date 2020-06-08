@@ -61,6 +61,23 @@ def search_greedy(initial: List, transition: List, L: int) -> Tuple[float, Tuple
     return max_prop, max_route
 
 
+def search_prob_greedy(initial: List, transition: List, L: int) -> Tuple[float, Tuple]:
+    import random
+    N = len(initial)
+    max_route = []
+    max_prop = 0.0
+    vertices = [i for i in range(N)]
+    prob = initial[:]
+
+    for l in range(0, L):
+        v_lst = random.choices(vertices, prob)
+        v = v_lst[0]
+        max_route.append(v)
+        max_prop = prob[v]
+        prob = [prob[v] * transition[v][v_target] for v_target in range(N)]
+
+    return max_prop, max_route
+
 def search_beam(initial: List, transition: List, L: int, K: int) -> Tuple[float, Tuple]:
     N = len(initial)
     from queue import PriorityQueue
@@ -102,8 +119,8 @@ def search_beam(initial: List, transition: List, L: int, K: int) -> Tuple[float,
 
 
 if __name__ == "__main__":
-    max_prop, max_route = search_brute_force(initial, transition, 3)
-    print(max_prop, max_route)
-    max_prop, max_route = search_beam(initial, transition, 3, 2)
+    # max_prop, max_route = search_brute_force(initial, transition, 3)
+    # print(max_prop, max_route)
+    max_prop, max_route = search_prob_greedy(initial, transition, 3)
     print(max_prop, max_route)
     # print(max_path)

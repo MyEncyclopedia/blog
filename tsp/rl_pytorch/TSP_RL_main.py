@@ -1,11 +1,12 @@
 import math
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch import Tensor
 import torch.autograd as autograd
 import torch.nn.functional as F
 from IPython.core.display import clear_output
@@ -26,7 +27,7 @@ class TSPUnlabeledDataset(Dataset):
         torch.manual_seed(random_seed)
 
         self.data_set = []
-        for l in tqdm(range(num_samples)):
+        for _ in tqdm(range(num_samples)):
             x = torch.FloatTensor(2, num_nodes).uniform_(0, 1)
             self.data_set.append(x)
 
@@ -56,11 +57,14 @@ class Attention(nn.Module):
             self.V = nn.Parameter(V)
             self.V.data.uniform_(-(1. / math.sqrt(hidden_size)), 1. / math.sqrt(hidden_size))
 
-    def forward(self, query, ref):
+    def forward(self, query: Tensor, ref: Tensor) -> Tuple[Tensor, Tensor]:
         """
         Args:
             query: [batch_size x hidden_size]
             ref:   [batch_size x seq_len x hidden_size]
+        Returns:
+            ref:    [batch_size x hidden_size, seq_len]
+            logits: [batch_size x seq_len]
         """
 
         batch_size = ref.size(0)
@@ -136,16 +140,18 @@ class PointerNet(nn.Module):
             logits[clone_mask.bool()] = -np.inf
         return logits, clone_mask
 
-    def forward(self, inputs):
+    def forward(self, batch_input: Tensor) -> Tuple[List[Tensor], List[Tensor]]:
         """
         Args:
-            inputs: [batch_size x 1 x sourceL]
+            batch_input: [batch_size x 2 x seq_len]
+        Returns:
+            prob_list:        [batch_size x seq_len][seq_len]
+            action_idx_list:  [batch_size][seq_len]
         """
-        batch_size = inputs.size(0)
-        seq_len = inputs.size(2)
-        assert seq_len == self.seq_len
+        batch_size = batch_input.size(0)
+        seq_len = batch_input.size(2)
 
-        embedded = self.embedding(inputs)
+        embedded = self.embedding(batch_input)
         encoder_outputs, (hidden, context) = self.encoder(embedded)
 
         prob_list = []
@@ -193,21 +199,25 @@ class CombinatorialRL(nn.Module):
 
         self.actor = PointerNet(embedding_size, hidden_size, seq_len, num_glimpse, tanh_exploration, use_tanh, attention)
 
-    def forward(self, inputs):
+    def forward(self, batch_input: Tensor) -> Tuple[Tensor, List[Tensor], List[Tensor], List[Tensor]]:
         """
         Args:
-            inputs: [batch_size, input_size, seq_len]
+            batch_input: [batch_size, 2, seq_len]
+        Returns:
+            R: Tensor of shape 32
+            action_prob_list: [batch_size][seq_len]
+            action_list:      [batch_size x 2][seq_len]
+            action_idx_list:  [batch_size][seq_len]
         """
-        batch_size = inputs.size(0)
-        input_size = inputs.size(1)
-        seq_len = inputs.size(2)
+        batch_size = batch_input.size(0)
+        seq_len = batch_input.size(2)
 
-        prob_list, action_idx_list = self.actor(inputs)
+        prob_list, action_idx_list = self.actor(batch_input)
 
         action_list = []
-        inputs = inputs.transpose(1, 2)
+        batch_input = batch_input.transpose(1, 2)
         for action_id in action_idx_list:
-            action_list.append(inputs[[x for x in range(batch_size)], action_id.data, :])
+            action_list.append(batch_input[[x for x in range(batch_size)], action_id.data, :])
         action_prob_list = []
         for prob, action_id in zip(prob_list, action_idx_list):
             action_prob_list.append(prob[[x for x in range(batch_size)], action_id.data])
@@ -217,14 +227,14 @@ class CombinatorialRL(nn.Module):
         return R, action_prob_list, action_list, action_idx_list
 
 
-    def reward(self, sample_solution: List[torch.Tensor]) -> torch.Tensor:
+    def reward(self, sample_solution: List[Tensor]) -> Tensor:
         """
         Computes total distance of tour
         Args:
             sample_solution: list of size N, each tensor of shape [batch_size x 2]
 
         Returns:
-            tour_len: 32
+            tour_len: [32]
 
         """
         batch_size = sample_solution[0].size(0)

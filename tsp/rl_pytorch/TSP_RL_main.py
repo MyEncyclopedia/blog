@@ -131,14 +131,23 @@ class PointerNet(nn.Module):
         self.decoder_start_input = nn.Parameter(torch.FloatTensor(embedding_size))
         self.decoder_start_input.data.uniform_(-(1. / math.sqrt(embedding_size)), 1. / math.sqrt(embedding_size))
 
-    def apply_mask_to_logits(self, logits, mask, idxs):
+    def apply_mask_to_logits(self, logits: Tensor, mask: Tensor, idxs: Tensor) -> Tuple[Tensor, Tensor]:
+        """
+        Args:
+            logits: [batch_size x seq_len]
+            mask:   [batch_size x seq_len]
+            idxs:   None or tensor [batch_size]
+        Returns:
+            logits:      []
+            mask_clone:  []
+        """
         batch_size = logits.size(0)
-        clone_mask = mask.clone()
+        mask_clone = mask.clone()
 
         if idxs is not None:
-            clone_mask[[i for i in range(batch_size)], idxs.data] = 1
-            logits[clone_mask.bool()] = -np.inf
-        return logits, clone_mask
+            mask_clone[[i for i in range(batch_size)], idxs.data] = 1
+            logits[mask_clone.bool()] = -np.inf
+        return logits, mask_clone
 
     def forward(self, batch_input: Tensor) -> Tuple[List[Tensor], List[Tensor]]:
         """

@@ -18,7 +18,7 @@ from tqdm import tqdm
 USE_CUDA = False
 
 
-def reward(sample_solution: List[torch.Tensor]) -> torch.Tensor[torch.float32]:
+def reward(sample_solution: List[torch.Tensor]) -> torch.Tensor:
     """
     Computes total distance of tour
     Args:

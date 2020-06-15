@@ -148,8 +148,8 @@ class PointerNet(nn.Module):
         embedded = self.embedding(inputs)
         encoder_outputs, (hidden, context) = self.encoder(embedded)
 
-        prev_probs = []
-        prev_idxs = []
+        prob_list = []
+        action_idx_list = []
         mask = torch.zeros(batch_size, seq_len).byte()
         if USE_CUDA:
             mask = mask.cuda()
@@ -174,7 +174,7 @@ class PointerNet(nn.Module):
 
             # print('nnn c_f')
             idxs = probs.multinomial(1).squeeze(1)
-            for old_idxs in prev_idxs:
+            for old_idxs in action_idx_list:
                 if old_idxs.eq(idxs).data.any():
                     print(f'{seq_len}')
                     print(' RESAMPLE!')
@@ -182,21 +182,14 @@ class PointerNet(nn.Module):
                     break
             decoder_input = embedded[[i for i in range(batch_size)], idxs.data, :]
 
-            prev_probs.append(probs)
-            prev_idxs.append(idxs)
+            prob_list.append(probs)
+            action_idx_list.append(idxs)
 
-        return prev_probs, prev_idxs
+        return prob_list, action_idx_list
 
 
 class CombinatorialRL(nn.Module):
-    def __init__(self,
-                 embedding_size,
-                 hidden_size,
-                 seq_len,
-                 num_glimpse,
-                 tanh_exploration,
-                 use_tanh,
-                 attention, ):
+    def __init__(self, embedding_size, hidden_size, seq_len, num_glimpse, tanh_exploration, use_tanh, attention):
         super(CombinatorialRL, self).__init__()
 
         self.actor = PointerNet(embedding_size, hidden_size, seq_len, num_glimpse, tanh_exploration, use_tanh, attention)
@@ -210,19 +203,19 @@ class CombinatorialRL(nn.Module):
         input_size = inputs.size(1)
         seq_len = inputs.size(2)
 
-        probs, action_idxs = self.actor(inputs)
+        prob_list, action_idx_list = self.actor(inputs)
 
-        actions = []
+        action_list = []
         inputs = inputs.transpose(1, 2)
-        for action_id in action_idxs:
-            actions.append(inputs[[x for x in range(batch_size)], action_id.data, :])
-        action_probs = []
-        for prob, action_id in zip(probs, action_idxs):
-            action_probs.append(prob[[x for x in range(batch_size)], action_id.data])
+        for action_id in action_idx_list:
+            action_list.append(inputs[[x for x in range(batch_size)], action_id.data, :])
+        action_prob_list = []
+        for prob, action_id in zip(prob_list, action_idx_list):
+            action_prob_list.append(prob[[x for x in range(batch_size)], action_id.data])
 
-        R = self.reward(actions)
+        R = self.reward(action_list)
 
-        return R, action_probs, actions, action_idxs
+        return R, action_prob_list, action_list, action_idx_list
 
 
     def reward(self, sample_solution: List[torch.Tensor]) -> torch.Tensor:
@@ -263,9 +256,9 @@ def plot(epoch, train_tour, validate_tour):
 
 if __name__ == "__main__":
     train_size = 100000
-    val_size = 10000
+    validate_size = 10000
     train_dataset = TSP_Unlabeled_Dataset(10, train_size)
-    validate_dataset = TSP_Unlabeled_Dataset(10, val_size)
+    validate_dataset = TSP_Unlabeled_Dataset(10, validate_size)
 
     embedding_size = 128
     hidden_size = 128
@@ -286,8 +279,7 @@ if __name__ == "__main__":
     max_grad_norm = 2.0
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
-    val_loader = DataLoader(validate_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
-
+    validate_loader = DataLoader(validate_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
     actor_optim = optim.Adam(RL_model.actor.parameters(), lr=1e-4)
 
     train_tour = []
@@ -308,7 +300,7 @@ if __name__ == "__main__":
             if USE_CUDA:
                 inputs = inputs.cuda()
 
-            R, probs, actions, actions_idxs = RL_model(inputs)
+            R, prob_list, action_list, actions_idx_list = RL_model(inputs)
 
             if batch_id == 0:
                 critic_exp_mvg_avg = R.mean()
@@ -318,7 +310,7 @@ if __name__ == "__main__":
             advantage = R - critic_exp_mvg_avg
 
             log_probs = 0
-            for prob in probs:
+            for prob in prob_list:
                 log_prob = torch.log(prob)
                 log_probs += log_prob
             log_probs[log_probs < -1000] = 0.
@@ -341,12 +333,12 @@ if __name__ == "__main__":
 
             if batch_id % 100 == 0:
                 RL_model.eval()
-                for val_batch in val_loader:
-                    inputs = Variable(val_batch)
+                for validate_batch in validate_loader:
+                    inputs = Variable(validate_batch)
                     if USE_CUDA:
                         inputs = inputs.cuda()
 
-                    R, probs, actions, actions_idxs = RL_model(inputs)
+                    R, prob_list, action_list, actions_idx_list = RL_model(inputs)
                     validate_tour.append(R.mean().item())
 
         if threshold and train_tour[-1] < threshold:

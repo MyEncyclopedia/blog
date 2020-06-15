@@ -1,4 +1,6 @@
 import math
+from typing import List
+
 import numpy as np
 
 import torch
@@ -16,23 +18,23 @@ from tqdm import tqdm
 USE_CUDA = False
 
 
-def reward(sample_solution, USE_CUDA=False):
+def reward(sample_solution: List[torch.Tensor]) -> torch.Tensor[torch.float32]:
     """
+    Computes total distance of tour
     Args:
-        sample_solution seq_len of [batch_size]
+        sample_solution: list of size N, each tensor of shape [batch_size x 2]
+
+    Returns:
+        tour_len: 32
+
     """
     batch_size = sample_solution[0].size(0)
     n = len(sample_solution)
     tour_len = Variable(torch.zeros([batch_size]))
 
-    if USE_CUDA:
-        tour_len = tour_len.cuda()
-
     for i in range(n - 1):
         tour_len += torch.norm(sample_solution[i] - sample_solution[i + 1], dim=1)
-
     tour_len += torch.norm(sample_solution[n - 1] - sample_solution[0], dim=1)
-
     return tour_len
 
 

@@ -18,25 +18,6 @@ from tqdm import tqdm
 USE_CUDA = False
 
 
-def reward(sample_solution: List[torch.Tensor]) -> torch.Tensor:
-    """
-    Computes total distance of tour
-    Args:
-        sample_solution: list of size N, each tensor of shape [batch_size x 2]
-
-    Returns:
-        tour_len: 32
-
-    """
-    batch_size = sample_solution[0].size(0)
-    n = len(sample_solution)
-    tour_len = Variable(torch.zeros([batch_size]))
-
-    for i in range(n - 1):
-        tour_len += torch.norm(sample_solution[i] - sample_solution[i + 1], dim=1)
-    tour_len += torch.norm(sample_solution[n - 1] - sample_solution[0], dim=1)
-    return tour_len
-
 
 class TSPDataset(Dataset):
 
@@ -58,7 +39,7 @@ class TSPDataset(Dataset):
         return self.data_set[idx]
 
 class Attention(nn.Module):
-    def __init__(self, hidden_size, use_tanh=False, C=10, name='Bahdanau', use_cuda=USE_CUDA):
+    def __init__(self, hidden_size, use_tanh=False, C=10, name='Bahdanau'):
         super(Attention, self).__init__()
 
         self.use_tanh = use_tanh
@@ -70,7 +51,7 @@ class Attention(nn.Module):
             self.W_ref = nn.Conv1d(hidden_size, hidden_size, 1, 1)
 
             V = torch.FloatTensor(hidden_size)
-            if use_cuda:
+            if USE_CUDA:
                 V = V.cuda()
             self.V = nn.Parameter(V)
             self.V.data.uniform_(-(1. / math.sqrt(hidden_size)), 1. / math.sqrt(hidden_size))
@@ -109,10 +90,9 @@ class Attention(nn.Module):
 
 
 class GraphEmbedding(nn.Module):
-    def __init__(self, input_size, embedding_size, use_cuda=USE_CUDA):
+    def __init__(self, input_size, embedding_size):
         super(GraphEmbedding, self).__init__()
         self.embedding_size = embedding_size
-        self.use_cuda = use_cuda
 
         self.embedding = nn.Parameter(torch.FloatTensor(input_size, embedding_size))
         self.embedding.data.uniform_(-(1. / math.sqrt(embedding_size)), 1. / math.sqrt(embedding_size))
@@ -130,28 +110,19 @@ class GraphEmbedding(nn.Module):
 
 
 class PointerNet(nn.Module):
-    def __init__(self,
-                 embedding_size,
-                 hidden_size,
-                 seq_len,
-                 n_glimpses,
-                 tanh_exploration,
-                 use_tanh,
-                 attention,
-                 use_cuda=USE_CUDA):
+    def __init__(self, embedding_size, hidden_size, seq_len, num_glimpse, tanh_exploration, use_tanh, attention):
         super(PointerNet, self).__init__()
 
         self.embedding_size = embedding_size
         self.hidden_size = hidden_size
-        self.n_glimpses = n_glimpses
+        self.num_glimpse = num_glimpse
         self.seq_len = seq_len
-        self.use_cuda = use_cuda
 
-        self.embedding = GraphEmbedding(2, embedding_size, use_cuda=use_cuda)
+        self.embedding = GraphEmbedding(2, embedding_size)
         self.encoder = nn.LSTM(embedding_size, hidden_size, batch_first=True)
         self.decoder = nn.LSTM(embedding_size, hidden_size, batch_first=True)
-        self.pointer = Attention(hidden_size, use_tanh=use_tanh, C=tanh_exploration, name=attention, use_cuda=use_cuda)
-        self.glimpse = Attention(hidden_size, use_tanh=False, name=attention, use_cuda=use_cuda)
+        self.pointer = Attention(hidden_size, use_tanh=use_tanh, C=tanh_exploration, name=attention)
+        self.glimpse = Attention(hidden_size, use_tanh=False, name=attention)
 
         self.decoder_start_input = nn.Parameter(torch.FloatTensor(embedding_size))
         self.decoder_start_input.data.uniform_(-(1. / math.sqrt(embedding_size)), 1. / math.sqrt(embedding_size))
@@ -180,7 +151,7 @@ class PointerNet(nn.Module):
         prev_probs = []
         prev_idxs = []
         mask = torch.zeros(batch_size, seq_len).byte()
-        if self.use_cuda:
+        if USE_CUDA:
             mask = mask.cuda()
 
         idxs = None
@@ -192,7 +163,7 @@ class PointerNet(nn.Module):
             _, (hidden, context) = self.decoder(decoder_input.unsqueeze(1), (hidden, context))
 
             query = hidden.squeeze(0)
-            for i in range(self.n_glimpses):
+            for i in range(self.num_glimpse):
                 ref, logits = self.glimpse(query, encoder_outputs)
                 logits, mask = self.apply_mask_to_logits(logits, mask, idxs)
                 query = torch.bmm(ref, F.softmax(logits).unsqueeze(2)).squeeze(2)
@@ -222,25 +193,13 @@ class CombinatorialRL(nn.Module):
                  embedding_size,
                  hidden_size,
                  seq_len,
-                 n_glimpses,
+                 num_glimpse,
                  tanh_exploration,
                  use_tanh,
-                 reward,
-                 attention,
-                 use_cuda=USE_CUDA):
+                 attention, ):
         super(CombinatorialRL, self).__init__()
-        self.reward = reward
-        self.use_cuda = use_cuda
 
-        self.actor = PointerNet(
-            embedding_size,
-            hidden_size,
-            seq_len,
-            n_glimpses,
-            tanh_exploration,
-            use_tanh,
-            attention,
-            use_cuda)
+        self.actor = PointerNet(embedding_size, hidden_size, seq_len, num_glimpse, tanh_exploration, use_tanh, attention)
 
     def forward(self, inputs):
         """
@@ -261,9 +220,29 @@ class CombinatorialRL(nn.Module):
         for prob, action_id in zip(probs, action_idxs):
             action_probs.append(prob[[x for x in range(batch_size)], action_id.data])
 
-        R = self.reward(actions, self.use_cuda)
+        R = self.reward(actions)
 
         return R, action_probs, actions, action_idxs
+
+
+    def reward(self, sample_solution: List[torch.Tensor]) -> torch.Tensor:
+        """
+        Computes total distance of tour
+        Args:
+            sample_solution: list of size N, each tensor of shape [batch_size x 2]
+
+        Returns:
+            tour_len: 32
+
+        """
+        batch_size = sample_solution[0].size(0)
+        n = len(sample_solution)
+        tour_len = Variable(torch.zeros([batch_size]))
+
+        for i in range(n - 1):
+            tour_len += torch.norm(sample_solution[i] - sample_solution[i + 1], dim=1)
+        tour_len += torch.norm(sample_solution[n - 1] - sample_solution[0], dim=1)
+        return tour_len
 
 
 class TrainModel:
@@ -374,7 +353,7 @@ if __name__ == "__main__":
 
     embedding_size = 128
     hidden_size = 128
-    n_glimpses = 1
+    num_glimpse = 1
     tanh_exploration = 10
     use_tanh = True
 
@@ -385,12 +364,11 @@ if __name__ == "__main__":
         embedding_size,
         hidden_size,
         10,
-        n_glimpses,
+        num_glimpse,
         tanh_exploration,
         use_tanh,
-        reward,
         attention="Dot",
-        use_cuda=USE_CUDA)
+        )
 
     if USE_CUDA:
         tsp_10_model = tsp_10_model.cuda()

@@ -19,10 +19,10 @@ USE_CUDA = False
 
 
 
-class TSPDataset(Dataset):
+class TSP_Unlabeled_Dataset(Dataset):
 
     def __init__(self, num_nodes, num_samples, random_seed=111):
-        super(TSPDataset, self).__init__()
+        super(TSP_Unlabeled_Dataset, self).__init__()
         torch.manual_seed(random_seed)
 
         self.data_set = []
@@ -245,111 +245,27 @@ class CombinatorialRL(nn.Module):
         return tour_len
 
 
-class TrainModel:
-    def __init__(self, model, train_dataset, val_dataset, batch_size=32, threshold=None, max_grad_norm=2.):
-        self.model = model
-        self.train_dataset = train_dataset
-        self.val_dataset = val_dataset
-        self.batch_size = batch_size
-        self.threshold = threshold
 
-        self.train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
-        self.val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
-
-        self.actor_optim = optim.Adam(model.actor.parameters(), lr=1e-4)
-        self.max_grad_norm = max_grad_norm
-
-        self.train_tour = []
-        self.val_tour = []
-
-        self.epochs = 0
-
-    def train_and_validate(self, n_epochs):
-        critic_exp_mvg_avg = torch.zeros(1)
-        if USE_CUDA:
-            critic_exp_mvg_avg = critic_exp_mvg_avg.cuda()
-
-        for epoch in range(n_epochs):
-            for batch_id, sample_batch in enumerate(self.train_loader):
-                # self.pointer.train()
-                self.model.train()
-
-                inputs = Variable(sample_batch)
-                if USE_CUDA:
-                    inputs = inputs.cuda()
-
-                R, probs, actions, actions_idxs = self.model(inputs)
-
-                if batch_id == 0:
-                    critic_exp_mvg_avg = R.mean()
-                else:
-                    critic_exp_mvg_avg = (critic_exp_mvg_avg * beta) + ((1. - beta) * R.mean())
-
-                advantage = R - critic_exp_mvg_avg
-
-                logprobs = 0
-                for prob in probs:
-                    logprob = torch.log(prob)
-                    logprobs += logprob
-                logprobs[logprobs < -1000] = 0.
-
-                reinforce = advantage * logprobs
-                actor_loss = reinforce.mean()
-
-                self.actor_optim.zero_grad()
-                actor_loss.backward()
-                torch.nn.utils.clip_grad_norm(self.model.actor.parameters(),
-                                              float(self.max_grad_norm), norm_type=2)
-
-                self.actor_optim.step()
-
-                critic_exp_mvg_avg = critic_exp_mvg_avg.detach()
-
-                self.train_tour.append(R.mean().item())
-
-                print(f'batch_id {batch_id} {epoch}')
-                if batch_id % 10 == 0:
-                    self.plot(self.epochs)
-
-                if batch_id % 100 == 0:
-
-                    self.model.eval()
-                    for val_batch in self.val_loader:
-                        inputs = Variable(val_batch)
-                        if USE_CUDA:
-                            inputs = inputs.cuda()
-
-                        R, probs, actions, actions_idxs = self.model(inputs)
-                        self.val_tour.append(R.mean().item())
-
-            if self.threshold and self.train_tour[-1] < self.threshold:
-                print("EARLY STOPPAGE!")
-                break
-
-            self.epochs += 1
-
-    def plot(self, epoch):
-        # return
-        clear_output(True)
-        plt.figure(figsize=(20, 5))
-        plt.subplot(131)
-        plt.title('train tour length: epoch %s reward %s' % (
-        epoch, self.train_tour[-1] if len(self.train_tour) else 'collecting'))
-        plt.plot(self.train_tour)
-        plt.grid()
-        plt.subplot(132)
-        plt.title(
-            'val tour length: epoch %s reward %s' % (epoch, self.val_tour[-1] if len(self.val_tour) else 'collecting'))
-        plt.plot(self.val_tour)
-        plt.grid()
-        plt.show()
+def plot(epoch, train_tour, val_tour):
+    clear_output(True)
+    plt.figure(figsize=(20, 5))
+    plt.subplot(131)
+    plt.title('train tour length: epoch %s reward %s' % (
+    epoch, train_tour[-1] if len(train_tour) else 'collecting'))
+    plt.plot(train_tour)
+    plt.grid()
+    plt.subplot(132)
+    plt.title('val tour length: epoch %s reward %s' % (epoch, val_tour[-1] if len(val_tour) else 'collecting'))
+    plt.plot(val_tour)
+    plt.grid()
+    plt.show()
 
 
 if __name__ == "__main__":
     train_size = 100000
     val_size = 10000
-    train_10_dataset = TSPDataset(10, train_size)
-    val_10_dataset = TSPDataset(10, val_size)
+    train_dataset = TSP_Unlabeled_Dataset(10, train_size)
+    val_dataset = TSP_Unlabeled_Dataset(10, val_size)
 
     embedding_size = 128
     hidden_size = 128
@@ -360,23 +276,83 @@ if __name__ == "__main__":
     beta = 0.9
     max_grad_norm = 2.
 
-    tsp_10_model = CombinatorialRL(
-        embedding_size,
-        hidden_size,
-        10,
-        num_glimpse,
-        tanh_exploration,
-        use_tanh,
-        attention="Dot",
-        )
+    model = CombinatorialRL(embedding_size, hidden_size, 10, num_glimpse, tanh_exploration, use_tanh, attention="Dot")
 
     if USE_CUDA:
-        tsp_10_model = tsp_10_model.cuda()
+        model = model.cuda()
 
-    tsp_10_train = TrainModel(tsp_10_model,
-                              train_10_dataset,
-                              val_10_dataset,
-                              threshold=3.99)
+    batch_size = 32
+    threshold = 3.99
+    max_grad_norm = 2.0
 
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
 
-    tsp_10_train.train_and_validate(5)
+    actor_optim = optim.Adam(model.actor.parameters(), lr=1e-4)
+
+    train_tour = []
+    val_tour = []
+
+    epochs = 0
+
+    critic_exp_mvg_avg = torch.zeros(1)
+    if USE_CUDA:
+        critic_exp_mvg_avg = critic_exp_mvg_avg.cuda()
+
+    n_epochs = 5
+    for epoch in range(n_epochs):
+        for batch_id, sample_batch in enumerate(train_loader):
+            model.train()
+
+            inputs = Variable(sample_batch)
+            if USE_CUDA:
+                inputs = inputs.cuda()
+
+            R, probs, actions, actions_idxs = model(inputs)
+
+            if batch_id == 0:
+                critic_exp_mvg_avg = R.mean()
+            else:
+                critic_exp_mvg_avg = (critic_exp_mvg_avg * beta) + ((1. - beta) * R.mean())
+
+            advantage = R - critic_exp_mvg_avg
+
+            logprobs = 0
+            for prob in probs:
+                logprob = torch.log(prob)
+                logprobs += logprob
+            logprobs[logprobs < -1000] = 0.
+
+            reinforce = advantage * logprobs
+            actor_loss = reinforce.mean()
+
+            actor_optim.zero_grad()
+            actor_loss.backward()
+            torch.nn.utils.clip_grad_norm(model.actor.parameters(), float(max_grad_norm), norm_type=2)
+
+            actor_optim.step()
+
+            critic_exp_mvg_avg = critic_exp_mvg_avg.detach()
+
+            train_tour.append(R.mean().item())
+
+            print(f'batch_id {batch_id} {epoch}')
+            if batch_id % 10 == 0:
+                plot(epochs, train_tour, val_tour)
+
+            if batch_id % 100 == 0:
+                model.eval()
+                for val_batch in val_loader:
+                    inputs = Variable(val_batch)
+                    if USE_CUDA:
+                        inputs = inputs.cuda()
+
+                    R, probs, actions, actions_idxs = model(inputs)
+                    val_tour.append(R.mean().item())
+
+        if threshold and train_tour[-1] < threshold:
+            print("EARLY STOP!")
+            break
+
+        epochs += 1
+

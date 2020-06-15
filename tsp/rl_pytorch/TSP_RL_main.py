@@ -19,10 +19,10 @@ USE_CUDA = False
 
 
 
-class TSP_Unlabeled_Dataset(Dataset):
+class TSPUnlabeledDataset(Dataset):
 
     def __init__(self, num_nodes, num_samples, random_seed=111):
-        super(TSP_Unlabeled_Dataset, self).__init__()
+        super(TSPUnlabeledDataset, self).__init__()
         torch.manual_seed(random_seed)
 
         self.data_set = []
@@ -60,7 +60,7 @@ class Attention(nn.Module):
         """
         Args:
             query: [batch_size x hidden_size]
-            ref:   ]batch_size x seq_len x hidden_size]
+            ref:   [batch_size x seq_len x hidden_size]
         """
 
         batch_size = ref.size(0)
@@ -172,7 +172,6 @@ class PointerNet(nn.Module):
             logits, mask = self.apply_mask_to_logits(logits, mask, idxs)
             probs = F.softmax(logits)
 
-            # print('nnn c_f')
             idxs = probs.multinomial(1).squeeze(1)
             for old_idxs in action_idx_list:
                 if old_idxs.eq(idxs).data.any():
@@ -257,8 +256,8 @@ def plot(epoch, train_tour, validate_tour):
 if __name__ == "__main__":
     train_size = 100000
     validate_size = 10000
-    train_dataset = TSP_Unlabeled_Dataset(10, train_size)
-    validate_dataset = TSP_Unlabeled_Dataset(10, validate_size)
+    train_dataset = TSPUnlabeledDataset(10, train_size)
+    validate_dataset = TSPUnlabeledDataset(10, validate_size)
 
     embedding_size = 128
     hidden_size = 128

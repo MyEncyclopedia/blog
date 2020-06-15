@@ -246,7 +246,7 @@ class CombinatorialRL(nn.Module):
 
 
 
-def plot(epoch, train_tour, val_tour):
+def plot(epoch, train_tour, validate_tour):
     clear_output(True)
     plt.figure(figsize=(20, 5))
     plt.subplot(131)
@@ -255,8 +255,8 @@ def plot(epoch, train_tour, val_tour):
     plt.plot(train_tour)
     plt.grid()
     plt.subplot(132)
-    plt.title('val tour length: epoch %s reward %s' % (epoch, val_tour[-1] if len(val_tour) else 'collecting'))
-    plt.plot(val_tour)
+    plt.title('val tour length: epoch %s reward %s' % (epoch, validate_tour[-1] if len(validate_tour) else 'collecting'))
+    plt.plot(validate_tour)
     plt.grid()
     plt.show()
 
@@ -265,7 +265,7 @@ if __name__ == "__main__":
     train_size = 100000
     val_size = 10000
     train_dataset = TSP_Unlabeled_Dataset(10, train_size)
-    val_dataset = TSP_Unlabeled_Dataset(10, val_size)
+    validate_dataset = TSP_Unlabeled_Dataset(10, val_size)
 
     embedding_size = 128
     hidden_size = 128
@@ -276,22 +276,22 @@ if __name__ == "__main__":
     beta = 0.9
     max_grad_norm = 2.
 
-    model = CombinatorialRL(embedding_size, hidden_size, 10, num_glimpse, tanh_exploration, use_tanh, attention="Dot")
+    RL_model = CombinatorialRL(embedding_size, hidden_size, 10, num_glimpse, tanh_exploration, use_tanh, attention="Dot")
 
     if USE_CUDA:
-        model = model.cuda()
+        RL_model = RL_model.cuda()
 
     batch_size = 32
     threshold = 3.99
     max_grad_norm = 2.0
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+    val_loader = DataLoader(validate_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
 
-    actor_optim = optim.Adam(model.actor.parameters(), lr=1e-4)
+    actor_optim = optim.Adam(RL_model.actor.parameters(), lr=1e-4)
 
     train_tour = []
-    val_tour = []
+    validate_tour = []
 
     epochs = 0
 
@@ -299,16 +299,16 @@ if __name__ == "__main__":
     if USE_CUDA:
         critic_exp_mvg_avg = critic_exp_mvg_avg.cuda()
 
-    n_epochs = 5
-    for epoch in range(n_epochs):
+    num_epochs = 5
+    for epoch in range(num_epochs):
         for batch_id, sample_batch in enumerate(train_loader):
-            model.train()
+            RL_model.train()
 
             inputs = Variable(sample_batch)
             if USE_CUDA:
                 inputs = inputs.cuda()
 
-            R, probs, actions, actions_idxs = model(inputs)
+            R, probs, actions, actions_idxs = RL_model(inputs)
 
             if batch_id == 0:
                 critic_exp_mvg_avg = R.mean()
@@ -317,18 +317,18 @@ if __name__ == "__main__":
 
             advantage = R - critic_exp_mvg_avg
 
-            logprobs = 0
+            log_probs = 0
             for prob in probs:
-                logprob = torch.log(prob)
-                logprobs += logprob
-            logprobs[logprobs < -1000] = 0.
+                log_prob = torch.log(prob)
+                log_probs += log_prob
+            log_probs[log_probs < -1000] = 0.
 
-            reinforce = advantage * logprobs
+            reinforce = advantage * log_probs
             actor_loss = reinforce.mean()
 
             actor_optim.zero_grad()
             actor_loss.backward()
-            torch.nn.utils.clip_grad_norm(model.actor.parameters(), float(max_grad_norm), norm_type=2)
+            torch.nn.utils.clip_grad_norm(RL_model.actor.parameters(), float(max_grad_norm), norm_type=2)
 
             actor_optim.step()
 
@@ -336,19 +336,18 @@ if __name__ == "__main__":
 
             train_tour.append(R.mean().item())
 
-            print(f'batch_id {batch_id} {epoch}')
             if batch_id % 10 == 0:
-                plot(epochs, train_tour, val_tour)
+                plot(epochs, train_tour, validate_tour)
 
             if batch_id % 100 == 0:
-                model.eval()
+                RL_model.eval()
                 for val_batch in val_loader:
                     inputs = Variable(val_batch)
                     if USE_CUDA:
                         inputs = inputs.cuda()
 
-                    R, probs, actions, actions_idxs = model(inputs)
-                    val_tour.append(R.mean().item())
+                    R, probs, actions, actions_idxs = RL_model(inputs)
+                    validate_tour.append(R.mean().item())
 
         if threshold and train_tour[-1] < threshold:
             print("EARLY STOP!")

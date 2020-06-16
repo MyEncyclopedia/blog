@@ -266,24 +266,9 @@ class CombinatorialRL(nn.Module):
 
 
 
-def plot(epoch, train_tour, validate_tour):
-    clear_output(True)
-    plt.figure(figsize=(20, 5))
-    plt.subplot(131)
-    plt.title('train tour length: epoch %s reward %s' % (
-    epoch, train_tour[-1] if len(train_tour) else 'collecting'))
-    plt.plot(train_tour)
-    plt.grid()
-    plt.subplot(132)
-    plt.title('val tour length: epoch %s reward %s' % (epoch, validate_tour[-1] if len(validate_tour) else 'collecting'))
-    plt.plot(validate_tour)
-    plt.grid()
-    plt.show()
-
-
 if __name__ == "__main__":
     train_size = 100000
-    validate_size = 10000
+    validate_size = 1000
     train_dataset = TSPUnlabeledDataset(10, train_size)
     validate_dataset = TSPUnlabeledDataset(10, validate_size)
 
@@ -306,9 +291,6 @@ if __name__ == "__main__":
     validate_loader = DataLoader(validate_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
     actor_optim = optim.Adam(RL_model.actor.parameters(), lr=1e-4)
 
-    train_tour = []
-    validate_tour = []
-
     epochs = 0
 
     critic_exp_mvg_avg = torch.zeros(1)
@@ -316,6 +298,8 @@ if __name__ == "__main__":
     num_epochs = 5
     for epoch in range(num_epochs):
         for batch_id, sample_batch in enumerate(train_loader):
+            train_tour = []
+            # print(f'{epoch}: {batch_id}')
             RL_model.train()
 
             batch_input = Variable(sample_batch)
@@ -348,20 +332,21 @@ if __name__ == "__main__":
 
             train_tour.append(R.mean().item())
 
-            if batch_id % 10 == 0:
-                plot(epochs, train_tour, validate_tour)
-
             if batch_id % 100 == 0:
+                validate_tour = []
                 RL_model.eval()
                 for validate_batch in validate_loader:
                     batch_input_validate = Variable(validate_batch)
 
                     R, prob_list, action_list, actions_idx_list = RL_model(batch_input_validate)
                     validate_tour.append(R.mean().item())
+                print(f'{epoch} : {batch_id}')
+                print('validate tour {}'.format(sum(validate_tour) / len(validate_tour)))
+                print('train tour {}'.format(sum(train_tour) / len(train_tour)))
 
-        if threshold and train_tour[-1] < threshold:
-            print("EARLY STOP!")
-            break
+        # if threshold and train_tour[-1] < threshold:
+        #     print("EARLY STOP!")
+        #     break
 
         epochs += 1
 

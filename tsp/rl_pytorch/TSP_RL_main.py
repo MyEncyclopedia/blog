@@ -102,6 +102,14 @@ class GraphEmbedding(nn.Module):
         self.embedding.data.uniform_(-(1. / math.sqrt(embedding_size)), 1. / math.sqrt(embedding_size))
 
     def forward(self, batch_input: Tensor) -> Tensor:
+        """
+
+        Args:
+            batch_input: [batch_size x 2 x seq_len]
+        Returns:
+            embedded: [batch_size, input_size, embedding_size]
+
+        """
         batch_size = batch_input.size(0)
         seq_len = batch_input.size(2)
         embedding = self.embedding.repeat(batch_size, 1, 1)

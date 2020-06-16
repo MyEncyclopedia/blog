@@ -23,6 +23,7 @@ USE_CUDA = False
 # 2. configurable embedding
 # 3. unify data set
 # 4. beam search decoder
+# 5. critic net
 
 
 class TSPUnlabeledDataset(Dataset):

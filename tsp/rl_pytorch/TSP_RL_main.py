@@ -101,14 +101,14 @@ class GraphEmbedding(nn.Module):
         self.embedding = nn.Parameter(torch.FloatTensor(input_size, embedding_size))
         self.embedding.data.uniform_(-(1. / math.sqrt(embedding_size)), 1. / math.sqrt(embedding_size))
 
-    def forward(self, inputs):
-        batch_size = inputs.size(0)
-        seq_len = inputs.size(2)
+    def forward(self, batch_input: Tensor) -> Tensor:
+        batch_size = batch_input.size(0)
+        seq_len = batch_input.size(2)
         embedding = self.embedding.repeat(batch_size, 1, 1)
         embedded = []
-        inputs = inputs.unsqueeze(1)
+        batch_input = batch_input.unsqueeze(1)
         for i in range(seq_len):
-            embedded.append(torch.bmm(inputs[:, :, :, i].float(), embedding))
+            embedded.append(torch.bmm(batch_input[:, :, :, i].float(), embedding))
         embedded = torch.cat(embedded, 1)
         return embedded
 

@@ -172,7 +172,7 @@ class PointerNet(nn.Module):
         batch_size = batch_input.size(0)
         seq_len = batch_input.size(2)
 
-        embedded = self.embedding(batch_input)
+        embedded = self.embedding(batch_input)  # [batch_size, seq_len, embedded_size]
         encoder_outputs, (hidden, context) = self.encoder(embedded)
 
         prob_list = []
@@ -196,14 +196,14 @@ class PointerNet(nn.Module):
             logits, mask = self.apply_mask_to_logits(logits, mask, idxs)
             probs = F.softmax(logits)
 
-            idxs = probs.multinomial(1).squeeze(1)
+            idxs = probs.multinomial(1).squeeze(1)  # [batch_size]
             for old_idxs in action_idx_list:
                 if old_idxs.eq(idxs).data.any():
                     print(f'{seq_len}')
                     print(' RESAMPLE!')
                     idxs = probs.multinomial(1).squeeze(1)
                     break
-            decoder_input = embedded[[i for i in range(batch_size)], idxs.data, :]
+            decoder_input = embedded[[i for i in range(batch_size)], idxs.data, :]  # [batch_size x embedded_size]
 
             prob_list.append(probs)
             action_idx_list.append(idxs)

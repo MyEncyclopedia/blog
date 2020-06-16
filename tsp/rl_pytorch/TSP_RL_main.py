@@ -18,11 +18,16 @@ from tqdm import tqdm
 
 USE_CUDA = False
 
+# todo:
+# 1. move use_cuda out
+# 2. configurable embedding
+# 3. unify data set
+# 4. beam search decoder
 
 
 class TSPUnlabeledDataset(Dataset):
 
-    def __init__(self, num_nodes, num_samples, random_seed=111):
+    def __init__(self, num_nodes, num_samples, random_seed=9):
         super(TSPUnlabeledDataset, self).__init__()
         torch.manual_seed(random_seed)
 
@@ -52,8 +57,6 @@ class Attention(nn.Module):
             self.W_ref = nn.Conv1d(hidden_size, hidden_size, 1, 1)
 
             V = torch.FloatTensor(hidden_size)
-            if USE_CUDA:
-                V = V.cuda()
             self.V = nn.Parameter(V)
             self.V.data.uniform_(-(1. / math.sqrt(hidden_size)), 1. / math.sqrt(hidden_size))
 
@@ -174,15 +177,12 @@ class PointerNet(nn.Module):
         prob_list = []
         action_idx_list = []
         mask = torch.zeros(batch_size, seq_len).byte()
-        if USE_CUDA:
-            mask = mask.cuda()
 
         idxs = None
 
         decoder_input = self.decoder_start_input.unsqueeze(0).repeat(batch_size, 1)
 
         for i in range(seq_len):
-
             _, (hidden, context) = self.decoder(decoder_input.unsqueeze(1), (hidden, context))
 
             query = hidden.squeeze(0)
@@ -297,9 +297,6 @@ if __name__ == "__main__":
 
     RL_model = CombinatorialRL(embedding_size, hidden_size, 10, num_glimpse, tanh_exploration, use_tanh, attention="Dot")
 
-    if USE_CUDA:
-        RL_model = RL_model.cuda()
-
     batch_size = 32
     threshold = 3.99
     max_grad_norm = 2.0
@@ -314,19 +311,15 @@ if __name__ == "__main__":
     epochs = 0
 
     critic_exp_mvg_avg = torch.zeros(1)
-    if USE_CUDA:
-        critic_exp_mvg_avg = critic_exp_mvg_avg.cuda()
 
     num_epochs = 5
     for epoch in range(num_epochs):
         for batch_id, sample_batch in enumerate(train_loader):
             RL_model.train()
 
-            inputs = Variable(sample_batch)
-            if USE_CUDA:
-                inputs = inputs.cuda()
+            batch_input = Variable(sample_batch)
 
-            R, prob_list, action_list, actions_idx_list = RL_model(inputs)
+            R, prob_list, action_list, actions_idx_list = RL_model(batch_input)
 
             if batch_id == 0:
                 critic_exp_mvg_avg = R.mean()
@@ -360,11 +353,9 @@ if __name__ == "__main__":
             if batch_id % 100 == 0:
                 RL_model.eval()
                 for validate_batch in validate_loader:
-                    inputs = Variable(validate_batch)
-                    if USE_CUDA:
-                        inputs = inputs.cuda()
+                    batch_input_validate = Variable(validate_batch)
 
-                    R, prob_list, action_list, actions_idx_list = RL_model(inputs)
+                    R, prob_list, action_list, actions_idx_list = RL_model(batch_input_validate)
                     validate_tour.append(R.mean().item())
 
         if threshold and train_tour[-1] < threshold:

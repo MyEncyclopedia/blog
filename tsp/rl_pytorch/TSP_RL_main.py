@@ -14,7 +14,8 @@ from torch.autograd import Variable
 from torch.utils.data import Dataset, DataLoader
 import matplotlib.pyplot as plt
 # plt.switch_backend('agg')
-from tqdm import tqdm
+
+from rl_pytorch.TSP_dataset import TSPDataset, TSPUnlabeledDataset
 
 USE_CUDA = False
 
@@ -26,24 +27,7 @@ USE_CUDA = False
 # 5. critic net
 
 
-class TSPUnlabeledDataset(Dataset):
 
-    def __init__(self, num_nodes, num_samples, random_seed=9):
-        super(TSPUnlabeledDataset, self).__init__()
-        torch.manual_seed(random_seed)
-
-        self.data_set = []
-        for _ in tqdm(range(num_samples)):
-            x = torch.FloatTensor(2, num_nodes).uniform_(0, 1)
-            self.data_set.append(x)
-
-        self.size = len(self.data_set)
-
-    def __len__(self):
-        return self.size
-
-    def __getitem__(self, idx):
-        return self.data_set[idx]
 
 class Attention(nn.Module):
     def __init__(self, hidden_size, use_tanh=False, C=10, name='Bahdanau'):
@@ -177,7 +161,7 @@ class PointerNet(nn.Module):
 
         prob_list = []
         action_idx_list = []
-        mask = torch.zeros(batch_size, seq_len).byte()
+        mask = torch.zeros(batch_size, seq_len).bool()
 
         idxs = None
 
@@ -269,8 +253,6 @@ class CombinatorialRL(nn.Module):
 if __name__ == "__main__":
     train_size = 100000
     validate_size = 1000
-    train_dataset = TSPUnlabeledDataset(10, train_size)
-    validate_dataset = TSPUnlabeledDataset(10, validate_size)
 
     embedding_size = 128
     hidden_size = 128
@@ -288,19 +270,32 @@ if __name__ == "__main__":
     max_grad_norm = 2.0
     num_epochs = 5
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
-    validate_loader = DataLoader(validate_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+    use_random_ds = True
+    if use_random_ds:
+        train_dataset = TSPUnlabeledDataset(10, train_size)
+        validate_dataset = TSPUnlabeledDataset(10, validate_size)
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+        validate_loader = DataLoader(validate_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+    else:
+        train_ds = TSPDataset('../tsp_10_test_sample.txt', 10, 10)
+        test_ds = TSPDataset('../tsp_10_test_sample.txt', 10, 10)
+        train_loader = DataLoader(train_ds, num_workers=0, batch_size=batch_size)
+        validate_loader = DataLoader(test_ds, num_workers=0, batch_size=batch_size)
+
     actor_optim = optim.Adam(RL_model.actor.parameters(), lr=1e-4)
     critic_exp_mvg_avg = torch.zeros(1)
     threshold_stop = False
 
     for epoch in range(num_epochs):
-        for batch_id, sample_batch in enumerate(train_loader):
+        batch_id = 0
+        for batch_item in train_loader:
+            batch_input = batch_item[0] # [batch_size * 2 * seq_len]
+            batch_id += 1
             train_tour = []
-            # print(f'{epoch}: {batch_id}')
+            print(f'{epoch}: {batch_id}')
             RL_model.train()
 
-            batch_input = Variable(sample_batch)
+            batch_input = Variable(batch_input)
 
             R, prob_list, action_list, actions_idx_list = RL_model(batch_input)
 

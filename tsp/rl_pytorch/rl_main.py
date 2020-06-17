@@ -160,7 +160,7 @@ class PointerNet(nn.Module):
 
         if idxs is not None:
             clone_mask[[i for i in range(batch_size)], idxs.data] = 1
-            logits[clone_mask] = -np.inf
+            logits[clone_mask.bool()] = -np.inf
         return logits, clone_mask
 
     def forward(self, inputs):

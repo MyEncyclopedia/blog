@@ -1,8 +1,10 @@
 # coding=utf-8
 from typing import Tuple, List
 import numpy as np
+import torch
 from torch.utils.data import Dataset
 from copy import copy
+from tqdm import tqdm
 
 
 class TSPDataset(Dataset):
@@ -43,13 +45,13 @@ class TSPDataset(Dataset):
 
                 # Padding input
                 input_len = len(input_raw) // 2
-                input = self.START + input_raw
+                input = input_raw
                 input_len += 1
                 # Special START token
                 assert self.max_in_seq_len + 1 >= input_len
                 for i in range(self.max_in_seq_len + 1 - input_len):
                     input += self.END
-                input = np.array(input).reshape([-1, 2])  # shape = (1 + num_points, 2)
+                input = np.array(input).reshape([2, -1])  # shape [2 * num_points]
                 input_len = np.array([input_len])         # 1 + num_points
                 # Padding output
                 output_len = len(output_raw) + 1
@@ -69,3 +71,23 @@ class TSPDataset(Dataset):
     def __getitem__(self, index):
         input, input_len, output_in, output_out, output_len = self.data[index]
         return input, input_len, output_in, output_out, output_len
+
+
+class TSPUnlabeledDataset(Dataset):
+
+    def __init__(self, num_nodes, num_samples, random_seed=9):
+        super(TSPUnlabeledDataset, self).__init__()
+        torch.manual_seed(random_seed)
+
+        self.data_set = []
+        for _ in tqdm(range(num_samples)):
+            x = torch.FloatTensor(2, num_nodes).uniform_(0, 1)
+            self.data_set.append([x])
+
+        self.size = len(self.data_set)
+
+    def __len__(self):
+        return self.size
+
+    def __getitem__(self, idx):
+        return self.data_set[idx]

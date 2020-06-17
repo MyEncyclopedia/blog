@@ -190,11 +190,11 @@ class PointerNet(nn.Module):
             for i in range(self.num_glimpse):
                 ref, logits = self.glimpse(query, encoder_outputs)
                 logits, mask = self.apply_mask_to_logits(logits, mask, idxs)
-                query = torch.bmm(ref, F.softmax(logits).unsqueeze(2)).squeeze(2)
+                query = torch.bmm(ref, F.softmax(logits, dim=1).unsqueeze(2)).squeeze(2)
 
             _, logits = self.pointer(query, encoder_outputs)
             logits, mask = self.apply_mask_to_logits(logits, mask, idxs)
-            probs = F.softmax(logits)
+            probs = F.softmax(logits, dim=1)
 
             idxs = probs.multinomial(1).squeeze(1)  # [batch_size]
             for old_idxs in action_idx_list:
@@ -284,7 +284,7 @@ if __name__ == "__main__":
     RL_model = CombinatorialRL(embedding_size, hidden_size, 10, num_glimpse, tanh_exploration, use_tanh, attention="Dot")
 
     batch_size = 32
-    threshold = 4.99
+    threshold = 3.99
     max_grad_norm = 2.0
     num_epochs = 5
 
@@ -322,7 +322,7 @@ if __name__ == "__main__":
 
             actor_optim.zero_grad()
             actor_loss.backward()
-            torch.nn.utils.clip_grad_norm(RL_model.actor.parameters(), float(max_grad_norm), norm_type=2)
+            torch.nn.utils.clip_grad_norm_(RL_model.actor.parameters(), float(max_grad_norm), norm_type=2)
 
             actor_optim.step()
 

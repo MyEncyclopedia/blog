@@ -64,11 +64,11 @@ class Attention(nn.Module):
     def forward(self, query: Tensor, ref: Tensor) -> Tuple[Tensor, Tensor]:
         """
         Args:
-            query: [batch_size x hidden_size]
-            ref:   [batch_size x seq_len x hidden_size]
+            query: [batch_size * hidden_size]
+            ref:   [batch_size * seq_len * hidden_size]
         Returns:
-            ref:    [batch_size x hidden_size, seq_len]
-            logits: [batch_size x seq_len]
+            ref:    [batch_size * hidden_size * seq_len]
+            logits: [batch_size * seq_len]
         """
 
         batch_size = ref.size(0)
@@ -76,15 +76,15 @@ class Attention(nn.Module):
 
         if self.name == 'Bahdanau':
             ref = ref.permute(0, 2, 1)
-            query = self.W_query(query).unsqueeze(2)  # [batch_size x hidden_size x 1]
-            ref = self.W_ref(ref)  # [batch_size x hidden_size x seq_len]
-            expanded_query = query.repeat(1, 1, seq_len)  # [batch_size x hidden_size x seq_len]
-            V = self.V.unsqueeze(0).unsqueeze(0).repeat(batch_size, 1, 1)  # [batch_size x 1 x hidden_size]
+            query = self.W_query(query).unsqueeze(2)  # [batch_size * hidden_size x 1]
+            ref = self.W_ref(ref)  # [batch_size x hidden_size * seq_len]
+            expanded_query = query.repeat(1, 1, seq_len)  # [batch_size * hidden_size * seq_len]
+            V = self.V.unsqueeze(0).unsqueeze(0).repeat(batch_size, 1, 1)  # [batch_size * 1 * hidden_size]
             logits = torch.bmm(V, torch.tanh(expanded_query + ref)).squeeze(1)
 
         elif self.name == 'Dot':
             query = query.unsqueeze(2)
-            logits = torch.bmm(ref, query).squeeze(2)  # [batch_size x seq_len x 1]
+            logits = torch.bmm(ref, query).squeeze(2)  # [batch_size * seq_len x 1]
             ref = ref.permute(0, 2, 1)
 
         else:
@@ -109,7 +109,7 @@ class GraphEmbedding(nn.Module):
         """
 
         Args:
-            batch_input: [batch_size x 2 x seq_len]
+            batch_input: [batch_size * 2 * seq_len]
         Returns:
             embedded: [batch_size, input_size, embedding_size]
 
@@ -146,8 +146,8 @@ class PointerNet(nn.Module):
     def apply_mask_to_logits(self, logits: Tensor, mask: Tensor, idxs: Tensor) -> Tuple[Tensor, Tensor]:
         """
         Args:
-            logits: [batch_size*seq_len]
-            mask:   [batch_size*seq_len]
+            logits: [batch_size * seq_len]
+            mask:   [batch_size * seq_len]
             idxs:   None or tensor [batch_size]
         Returns:
             logits:      []
@@ -164,15 +164,15 @@ class PointerNet(nn.Module):
     def forward(self, batch_input: Tensor) -> Tuple[List[Tensor], List[Tensor]]:
         """
         Args:
-            batch_input: [batch_size*2*seq_len]
+            batch_input: [batch_size * 2 * seq_len]
         Returns:
-            prob_list:        [batch_size*seq_len][seq_len]
+            prob_list:        [batch_size * seq_len][seq_len]
             action_idx_list:  [batch_size][seq_len]
         """
         batch_size = batch_input.size(0)
         seq_len = batch_input.size(2)
 
-        embedded = self.embedding(batch_input)  # [batch_size, seq_len, embedded_size]
+        embedded = self.embedding(batch_input)  # [batch_size * seq_len * embedded_size]
         encoder_outputs, (hidden, context) = self.encoder(embedded)
 
         prob_list = []
@@ -203,7 +203,7 @@ class PointerNet(nn.Module):
                     print(' RESAMPLE!')
                     idxs = probs.multinomial(1).squeeze(1)
                     break
-            decoder_input = embedded[[i for i in range(batch_size)], idxs.data, :]  # [batch_size*embedded_size]
+            decoder_input = embedded[[i for i in range(batch_size)], idxs.data, :]  # [batch_size * embedded_size]
 
             prob_list.append(probs)
             action_idx_list.append(idxs)
@@ -292,7 +292,7 @@ if __name__ == "__main__":
     validate_loader = DataLoader(validate_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
     actor_optim = optim.Adam(RL_model.actor.parameters(), lr=1e-4)
     critic_exp_mvg_avg = torch.zeros(1)
-    early_stop = False
+    threshold_stop = False
 
     for epoch in range(num_epochs):
         for batch_id, sample_batch in enumerate(train_loader):
@@ -338,17 +338,17 @@ if __name__ == "__main__":
                     R, prob_list, action_list, actions_idx_list = RL_model(batch_input_validate)
                     validate_tour.append(R.mean().item())
 
-                # print(f'{epoch} : {batch_id}')
                 validate_tour_avg_r = sum(validate_tour) / len(validate_tour)
                 train_tour_batch_avg_r = sum(train_tour) / len(train_tour)
+                # print(f'{epoch} : {batch_id}')
                 print(f'validate tour {validate_tour_avg_r}')
                 print(f'train tour {train_tour_batch_avg_r}')
 
                 if threshold and validate_tour_avg_r < threshold:
-                    early_stop = True
+                    threshold_stop = True
                     print("EARLY STOP!")
                     break
-            if early_stop:
+            if threshold_stop:
                 break;
 
 

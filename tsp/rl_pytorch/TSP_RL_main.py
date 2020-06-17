@@ -146,8 +146,8 @@ class PointerNet(nn.Module):
     def apply_mask_to_logits(self, logits: Tensor, mask: Tensor, idxs: Tensor) -> Tuple[Tensor, Tensor]:
         """
         Args:
-            logits: [batch_size x seq_len]
-            mask:   [batch_size x seq_len]
+            logits: [batch_size*seq_len]
+            mask:   [batch_size*seq_len]
             idxs:   None or tensor [batch_size]
         Returns:
             logits:      []
@@ -164,9 +164,9 @@ class PointerNet(nn.Module):
     def forward(self, batch_input: Tensor) -> Tuple[List[Tensor], List[Tensor]]:
         """
         Args:
-            batch_input: [batch_size x 2 x seq_len]
+            batch_input: [batch_size*2*seq_len]
         Returns:
-            prob_list:        [batch_size x seq_len][seq_len]
+            prob_list:        [batch_size*seq_len][seq_len]
             action_idx_list:  [batch_size][seq_len]
         """
         batch_size = batch_input.size(0)
@@ -203,7 +203,7 @@ class PointerNet(nn.Module):
                     print(' RESAMPLE!')
                     idxs = probs.multinomial(1).squeeze(1)
                     break
-            decoder_input = embedded[[i for i in range(batch_size)], idxs.data, :]  # [batch_size x embedded_size]
+            decoder_input = embedded[[i for i in range(batch_size)], idxs.data, :]  # [batch_size*embedded_size]
 
             prob_list.append(probs)
             action_idx_list.append(idxs)
@@ -224,7 +224,7 @@ class CombinatorialRL(nn.Module):
         Returns:
             R: Tensor of shape 32
             action_prob_list: [batch_size][seq_len]
-            action_list:      [batch_size x 2][seq_len]
+            action_list:      [batch_size*2][seq_len]
             action_idx_list:  [batch_size][seq_len]
         """
         batch_size = batch_input.size(0)
@@ -249,7 +249,7 @@ class CombinatorialRL(nn.Module):
         """
         Computes total distance of tour
         Args:
-            sample_solution: list of size N, each tensor of shape [batch_size x 2]
+            sample_solution: list of size N, each tensor of shape [batch_size*2]
 
         Returns:
             tour_len: [32]

@@ -20,13 +20,11 @@ from rl_pytorch.TSP_dataset import TSPDataset, TSPUnlabeledDataset
 USE_CUDA = False
 
 # todo:
-# 1. move use_cuda out
-# 2. configurable embedding
-# 3. unify data set
+# 1. annotate member
+# 2. mask
 # 4. beam search decoder
 # 5. critic net
-
-
+# 6. use_cuda gpu
 
 
 class Attention(nn.Module):
@@ -84,8 +82,6 @@ class Attention(nn.Module):
 class GraphEmbedding(nn.Module):
     def __init__(self, input_size, embedding_size):
         super(GraphEmbedding, self).__init__()
-        self.embedding_size = embedding_size
-
         self.embedding = nn.Parameter(torch.FloatTensor(input_size, embedding_size))
         self.embedding.data.uniform_(-(1. / math.sqrt(embedding_size)), 1. / math.sqrt(embedding_size))
 
@@ -110,15 +106,19 @@ class GraphEmbedding(nn.Module):
 
 
 class PointerNet(nn.Module):
-    def __init__(self, embedding_size, hidden_size, seq_len, num_glimpse, tanh_exploration, use_tanh, attention):
+    def __init__(self, use_embedding, embedding_size, hidden_size, seq_len, num_glimpse, tanh_exploration, use_tanh, attention):
         super(PointerNet, self).__init__()
 
-        self.embedding_size = embedding_size
+        self.use_embedding = use_embedding
+        if use_embedding:
+            self.embedding = GraphEmbedding(2, embedding_size)
+        else:
+            embedding_size = 2
+
         self.hidden_size = hidden_size
         self.num_glimpse = num_glimpse
         self.seq_len = seq_len
 
-        self.embedding = GraphEmbedding(2, embedding_size)
         self.encoder = nn.LSTM(embedding_size, hidden_size, batch_first=True)
         self.decoder = nn.LSTM(embedding_size, hidden_size, batch_first=True)
         self.pointer = Attention(hidden_size, use_tanh=use_tanh, C=tanh_exploration, name=attention)
@@ -156,7 +156,11 @@ class PointerNet(nn.Module):
         batch_size = batch_input.size(0)
         seq_len = batch_input.size(2)
 
-        embedded = self.embedding(batch_input)  # [batch_size * seq_len * embedded_size]
+        if self.use_embedding:
+            embedded = self.embedding(batch_input)  # [batch_size * seq_len * embedded_size]
+        else:
+            embedded = batch_input.permute(0, 2, 1)  # [batch_size * seq_len * embedded_size]
+
         encoder_outputs, (hidden, context) = self.encoder(embedded)
 
         prob_list = []
@@ -196,10 +200,10 @@ class PointerNet(nn.Module):
 
 
 class CombinatorialRL(nn.Module):
-    def __init__(self, embedding_size, hidden_size, seq_len, num_glimpse, tanh_exploration, use_tanh, attention):
+    def __init__(self, use_embedding, embedding_size, hidden_size, seq_len, num_glimpse, tanh_exploration, use_tanh, attention):
         super(CombinatorialRL, self).__init__()
 
-        self.actor = PointerNet(embedding_size, hidden_size, seq_len, num_glimpse, tanh_exploration, use_tanh, attention)
+        self.actor = PointerNet(use_embedding, embedding_size, hidden_size, seq_len, num_glimpse, tanh_exploration, use_tanh, attention)
 
     def forward(self, batch_input: Tensor) -> Tuple[Tensor, List[Tensor], List[Tensor], List[Tensor]]:
         """
@@ -254,7 +258,6 @@ if __name__ == "__main__":
     train_size = 100000
     validate_size = 1000
 
-    embedding_size = 128
     hidden_size = 128
     num_glimpse = 1
     tanh_exploration = 10
@@ -262,8 +265,10 @@ if __name__ == "__main__":
 
     beta = 0.9
     max_grad_norm = 2.
+    use_embedding = False
+    embedding_size = 128
 
-    RL_model = CombinatorialRL(embedding_size, hidden_size, 10, num_glimpse, tanh_exploration, use_tanh, attention="Dot")
+    RL_model = CombinatorialRL(use_embedding, embedding_size, hidden_size, 10, num_glimpse, tanh_exploration, use_tanh, attention="Dot")
 
     batch_size = 32
     threshold = 3.99

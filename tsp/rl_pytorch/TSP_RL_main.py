@@ -22,6 +22,7 @@ USE_CUDA = False
 # todo:
 # 1. annotate member
 # 2. mask
+# 3. plot
 # 4. beam search decoder
 # 5. critic net
 # 6. use_cuda gpu
@@ -187,8 +188,7 @@ class PointerNet(nn.Module):
             idxs = probs.multinomial(1).squeeze(1)  # [batch_size]
             for old_idxs in action_idx_list:
                 if old_idxs.eq(idxs).data.any():
-                    print(f'{seq_len}')
-                    print(' RESAMPLE!')
+                    print(f'{seq_len} resample')
                     idxs = probs.multinomial(1).squeeze(1)
                     break
             decoder_input = embedded[[i for i in range(batch_size)], idxs.data, :]  # [batch_size * embedded_size]

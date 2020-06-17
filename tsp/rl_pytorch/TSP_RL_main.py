@@ -158,7 +158,7 @@ class PointerNet(nn.Module):
 
         if idxs is not None:
             mask_clone[[i for i in range(batch_size)], idxs.data] = 1
-            logits[mask_clone.bool()] = -np.inf
+            logits[mask_clone] = -np.inf
         return logits, mask_clone
 
     def forward(self, batch_input: Tensor) -> Tuple[List[Tensor], List[Tensor]]:
@@ -284,18 +284,16 @@ if __name__ == "__main__":
     RL_model = CombinatorialRL(embedding_size, hidden_size, 10, num_glimpse, tanh_exploration, use_tanh, attention="Dot")
 
     batch_size = 32
-    threshold = 3.99
+    threshold = 4.99
     max_grad_norm = 2.0
+    num_epochs = 5
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
     validate_loader = DataLoader(validate_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
     actor_optim = optim.Adam(RL_model.actor.parameters(), lr=1e-4)
-
-    epochs = 0
-
     critic_exp_mvg_avg = torch.zeros(1)
+    early_stop = False
 
-    num_epochs = 5
     for epoch in range(num_epochs):
         for batch_id, sample_batch in enumerate(train_loader):
             train_tour = []
@@ -337,16 +335,20 @@ if __name__ == "__main__":
                 RL_model.eval()
                 for validate_batch in validate_loader:
                     batch_input_validate = Variable(validate_batch)
-
                     R, prob_list, action_list, actions_idx_list = RL_model(batch_input_validate)
                     validate_tour.append(R.mean().item())
-                print(f'{epoch} : {batch_id}')
-                print('validate tour {}'.format(sum(validate_tour) / len(validate_tour)))
-                print('train tour {}'.format(sum(train_tour) / len(train_tour)))
 
-        # if threshold and train_tour[-1] < threshold:
-        #     print("EARLY STOP!")
-        #     break
+                # print(f'{epoch} : {batch_id}')
+                validate_tour_avg_r = sum(validate_tour) / len(validate_tour)
+                train_tour_batch_avg_r = sum(train_tour) / len(train_tour)
+                print(f'validate tour {validate_tour_avg_r}')
+                print(f'train tour {train_tour_batch_avg_r}')
 
-        epochs += 1
+                if threshold and validate_tour_avg_r < threshold:
+                    early_stop = True
+                    print("EARLY STOP!")
+                    break
+            if early_stop:
+                break;
+
 

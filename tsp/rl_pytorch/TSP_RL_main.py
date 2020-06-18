@@ -20,7 +20,7 @@ from rl_pytorch.TSP_dataset import TSPDataset, TSPUnlabeledDataset
 USE_CUDA = False
 
 # todo:
-# 1. annotate member
+# 1. param
 # 2. mask
 # 3. plot
 # 4. beam search decoder
@@ -29,6 +29,10 @@ USE_CUDA = False
 
 
 class Attention(nn.Module):
+    use_tanh: bool
+    C: int
+    name: str
+
     def __init__(self, hidden_size, use_tanh=False, C=10, name='Bahdanau'):
         super(Attention, self).__init__()
 
@@ -81,6 +85,8 @@ class Attention(nn.Module):
 
 
 class GraphEmbedding(nn.Module):
+    embedding: nn.Parameter
+
     def __init__(self, input_size, embedding_size):
         super(GraphEmbedding, self).__init__()
         self.embedding = nn.Parameter(torch.FloatTensor(input_size, embedding_size))
@@ -107,6 +113,15 @@ class GraphEmbedding(nn.Module):
 
 
 class PointerNet(nn.Module):
+    use_embedding: bool
+    embedding: GraphEmbedding
+    num_glimpse: int
+    encoder: nn.LSTM
+    decoder: nn.LSTM
+    ptr_net: Attention
+    glimpse: Attention
+    decoder_start_input: nn.Parameter
+
     def __init__(self, use_embedding, embedding_size, hidden_size, seq_len, num_glimpse, tanh_exploration, use_tanh, attention):
         super(PointerNet, self).__init__()
 
@@ -116,13 +131,10 @@ class PointerNet(nn.Module):
         else:
             embedding_size = 2
 
-        self.hidden_size = hidden_size
         self.num_glimpse = num_glimpse
-        self.seq_len = seq_len
-
         self.encoder = nn.LSTM(embedding_size, hidden_size, batch_first=True)
         self.decoder = nn.LSTM(embedding_size, hidden_size, batch_first=True)
-        self.pointer = Attention(hidden_size, use_tanh=use_tanh, C=tanh_exploration, name=attention)
+        self.ptr_net = Attention(hidden_size, use_tanh=use_tanh, C=tanh_exploration, name=attention)
         self.glimpse = Attention(hidden_size, use_tanh=False, name=attention)
 
         self.decoder_start_input = nn.Parameter(torch.FloatTensor(embedding_size))
@@ -181,7 +193,7 @@ class PointerNet(nn.Module):
                 logits, mask = self.apply_mask_to_logits(logits, mask, idxs)
                 query = torch.bmm(ref, F.softmax(logits, dim=1).unsqueeze(2)).squeeze(2)
 
-            _, logits = self.pointer(query, encoder_outputs)
+            _, logits = self.ptr_net(query, encoder_outputs)
             logits, mask = self.apply_mask_to_logits(logits, mask, idxs)
             probs = F.softmax(logits, dim=1)
 
@@ -200,6 +212,8 @@ class PointerNet(nn.Module):
 
 
 class CombinatorialRL(nn.Module):
+    actor: PointerNet
+
     def __init__(self, use_embedding, embedding_size, hidden_size, seq_len, num_glimpse, tanh_exploration, use_tanh, attention):
         super(CombinatorialRL, self).__init__()
 

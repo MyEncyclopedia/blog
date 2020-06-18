@@ -20,7 +20,6 @@ from rl_pytorch.TSP_dataset import TSPDataset, TSPUnlabeledDataset
 USE_CUDA = False
 
 # todo:
-# 1. param
 # 2. mask
 # 3. plot
 # 4. beam search decoder
@@ -269,43 +268,49 @@ class CombinatorialRL(nn.Module):
 
 
 if __name__ == "__main__":
-    train_size = 100000
-    validate_size = 1000
+    import argparse
 
-    hidden_size = 128
-    num_glimpse = 1
+    parser = argparse.ArgumentParser("TSP_RL")
+    parser.add_argument("--gpu", type=int, default=0)
+    parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--hidden_size", type=int, default=128)
+    parser.add_argument("--random_train_size", type=int, default=100000)
+    parser.add_argument("--random_validate_size", type=int, default=1000)
+    parser.add_argument("--num_glimpse", type=int, default=1)
+    parser.add_argument("--use_embedding", type=int, default=1)
+    parser.add_argument("--embedding_size", type=int, default=128)
+    parser.add_argument("--num_epoch", type=int, default=5)
+    parser.add_argument("--train_filename", type=str, default="../tsp_10_test_sample.txt")
+    parser.add_argument("--validate_filename", type=str, default="../tsp_10_test_sample.txt")
+    parser.add_argument("--clip_norm", type=float, default=2.)
+    parser.add_argument("--threshold", type=float, default=3.99)
+    parser.add_argument("--log_dir", type=str, default="./log")
+
+    args = parser.parse_args()
+
     tanh_exploration = 10
     use_tanh = True
-
     beta = 0.9
-    max_grad_norm = 2.
-    use_embedding = False
-    embedding_size = 128
 
-    RL_model = CombinatorialRL(use_embedding, embedding_size, hidden_size, 10, num_glimpse, tanh_exploration, use_tanh, attention="Dot")
-
-    batch_size = 32
-    threshold = 3.99
-    max_grad_norm = 2.0
-    num_epochs = 5
+    RL_model = CombinatorialRL(args.use_embedding, args.embedding_size, args.hidden_size, 10, args.num_glimpse, tanh_exploration, use_tanh, attention="Dot")
 
     use_random_ds = True
     if use_random_ds:
-        train_dataset = TSPUnlabeledDataset(10, train_size)
-        validate_dataset = TSPUnlabeledDataset(10, validate_size)
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
-        validate_loader = DataLoader(validate_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+        train_dataset = TSPUnlabeledDataset(10, args.random_train_size)
+        validate_dataset = TSPUnlabeledDataset(10, args.random_validate_size)
+        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=0)
+        validate_loader = DataLoader(validate_dataset, batch_size=args.batch_size, shuffle=True, num_workers=0)
     else:
-        train_ds = TSPDataset('../tsp_10_test_sample.txt', 10, 10)
-        test_ds = TSPDataset('../tsp_10_test_sample.txt', 10, 10)
-        train_loader = DataLoader(train_ds, num_workers=0, batch_size=batch_size)
-        validate_loader = DataLoader(test_ds, num_workers=0, batch_size=batch_size)
+        train_ds = TSPDataset(args.train_filename, 10, 10)
+        test_ds = TSPDataset(args.validate_file, 10, 10)
+        train_loader = DataLoader(train_ds, num_workers=0, batch_size=args.batch_size)
+        validate_loader = DataLoader(test_ds, num_workers=0, batch_size=args.batch_size)
 
     actor_optim = optim.Adam(RL_model.actor.parameters(), lr=1e-4)
     critic_exp_mvg_avg = torch.zeros(1)
     threshold_stop = False
 
-    for epoch in range(num_epochs):
+    for epoch in range(args.num_epoch):
         batch_id = 0
         for batch_item in train_loader:
             batch_input = batch_item[0] # [batch_size * 2 * seq_len]
@@ -336,7 +341,7 @@ if __name__ == "__main__":
 
             actor_optim.zero_grad()
             actor_loss.backward()
-            torch.nn.utils.clip_grad_norm_(RL_model.actor.parameters(), float(max_grad_norm), norm_type=2)
+            torch.nn.utils.clip_grad_norm_(RL_model.actor.parameters(), float(args.clip_norm), norm_type=2)
 
             actor_optim.step()
 
@@ -358,7 +363,7 @@ if __name__ == "__main__":
                 print(f'validate tour {validate_tour_avg_r}')
                 print(f'train tour {train_tour_batch_avg_r}')
 
-                if threshold and validate_tour_avg_r < threshold:
+                if args.threshold and validate_tour_avg_r < args.threshold:
                     threshold_stop = True
                     print("EARLY STOP!")
                     break

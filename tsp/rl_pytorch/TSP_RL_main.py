@@ -26,6 +26,10 @@ USE_CUDA = False
 # 5. critic net
 # 6. use_cuda gpu
 
+def rnn_init(rnn_type: str, **kwargs) -> nn.RNNBase:
+    if rnn_type in ["LSTM", "GRU", "RNN"]:
+        rnn = getattr(nn, rnn_type)(**kwargs)
+    return rnn
 
 class Attention(nn.Module):
     use_tanh: bool
@@ -115,13 +119,13 @@ class PointerNet(nn.Module):
     use_embedding: bool
     embedding: GraphEmbedding
     num_glimpse: int
-    encoder: nn.LSTM
-    decoder: nn.LSTM
+    encoder: nn.RNNBase
+    decoder: nn.RNNBase
     ptr_net: Attention
     glimpse: Attention
     decoder_start_input: nn.Parameter
 
-    def __init__(self, use_embedding, embedding_size, hidden_size, seq_len, num_glimpse, tanh_exploration, use_tanh, attention):
+    def __init__(self, rnn_type, use_embedding, embedding_size, hidden_size, seq_len, num_glimpse, tanh_exploration, use_tanh, attention):
         super(PointerNet, self).__init__()
 
         self.use_embedding = use_embedding
@@ -132,7 +136,9 @@ class PointerNet(nn.Module):
 
         self.num_glimpse = num_glimpse
         self.encoder = nn.LSTM(embedding_size, hidden_size, batch_first=True)
-        self.decoder = nn.LSTM(embedding_size, hidden_size, batch_first=True)
+        # self.decoder = nn.LSTM(embedding_size, hidden_size, batch_first=True)
+        self.encoder = rnn_init(rnn_type, input_size = embedding_size, hidden_size=hidden_size, batch_first=True)
+        self.decoder = rnn_init(rnn_type, input_size = embedding_size, hidden_size=hidden_size, batch_first=True)
         self.ptr_net = Attention(hidden_size, use_tanh=use_tanh, C=tanh_exploration, name=attention)
         self.glimpse = Attention(hidden_size, use_tanh=False, name=attention)
 
@@ -177,7 +183,8 @@ class PointerNet(nn.Module):
 
         prob_list = []
         action_idx_list = []
-        mask = torch.zeros(batch_size, seq_len).bool()
+        mask = torch.zeros(batch_size, seq_len).byte()
+        # mask = torch.zeros(batch_size, seq_len).bool()
 
         idxs = None
 
@@ -213,10 +220,10 @@ class PointerNet(nn.Module):
 class CombinatorialRL(nn.Module):
     actor: PointerNet
 
-    def __init__(self, use_embedding, embedding_size, hidden_size, seq_len, num_glimpse, tanh_exploration, use_tanh, attention):
+    def __init__(self, rnn_type, use_embedding, embedding_size, hidden_size, seq_len, num_glimpse, tanh_exploration, use_tanh, attention):
         super(CombinatorialRL, self).__init__()
 
-        self.actor = PointerNet(use_embedding, embedding_size, hidden_size, seq_len, num_glimpse, tanh_exploration, use_tanh, attention)
+        self.actor = PointerNet(rnn_type, use_embedding, embedding_size, hidden_size, seq_len, num_glimpse, tanh_exploration, use_tanh, attention)
 
     def forward(self, batch_input: Tensor) -> Tuple[Tensor, List[Tensor], List[Tensor], List[Tensor]]:
         """
@@ -284,6 +291,7 @@ if __name__ == "__main__":
     parser.add_argument("--validate_filename", type=str, default="../tsp_10_test_sample.txt")
     parser.add_argument("--clip_norm", type=float, default=2.)
     parser.add_argument("--threshold", type=float, default=3.99)
+    parser.add_argument("--rnn_type", type=str, default='LSTM')
     parser.add_argument("--log_dir", type=str, default="./log")
 
     args = parser.parse_args()
@@ -292,7 +300,7 @@ if __name__ == "__main__":
     use_tanh = True
     beta = 0.9
 
-    RL_model = CombinatorialRL(args.use_embedding, args.embedding_size, args.hidden_size, 10, args.num_glimpse, tanh_exploration, use_tanh, attention="Dot")
+    RL_model = CombinatorialRL(args.rnn_type, args.use_embedding, args.embedding_size, args.hidden_size, 10, args.num_glimpse, tanh_exploration, use_tanh, attention="Dot")
 
     use_random_ds = True
     if use_random_ds:
@@ -359,7 +367,7 @@ if __name__ == "__main__":
 
                 validate_tour_avg_r = sum(validate_tour) / len(validate_tour)
                 train_tour_batch_avg_r = sum(train_tour) / len(train_tour)
-                # print(f'{epoch} : {batch_id}')
+                print(f'{epoch} : {batch_id}')
                 print(f'validate tour {validate_tour_avg_r}')
                 print(f'train tour {train_tour_batch_avg_r}')
 

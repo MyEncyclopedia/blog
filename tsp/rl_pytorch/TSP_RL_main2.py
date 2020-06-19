@@ -22,10 +22,10 @@ USE_CUDA = False
 
 # todo:
 # 1. bidirectional True does not work
-# 2. mask
-# 3. plot
-# 4. beam search decoder
-# 5. critic net
+# 2. beam search decoder
+# 3. critic net
+# 4. plot
+# 5. mask
 # 6. use_cuda gpu
 
 def rnn_init(rnn_type: str, **kwargs) -> nn.RNNBase:
@@ -836,7 +836,8 @@ if __name__ == "__main__":
                         help='Number of process block iters to run in the Critic network')
     parser.add_argument('--beam_size', default=1, help='Beam width for beam search')
     parser.add_argument('--dropout', default=0., help='')
-    parser.add_argument('--decode_type', type=str, default='stochastic', help='')
+    # parser.add_argument('--decode_type', type=str, default='stochastic', help='')
+    parser.add_argument('--decode_type', type=str, default='beam_search', help='')
 
     args = parser.parse_args()
 

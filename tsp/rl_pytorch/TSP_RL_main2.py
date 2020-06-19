@@ -39,7 +39,7 @@ class Attention(nn.Module):
     C: int
     name: str
 
-    def __init__(self, hidden_size, use_tanh=False, C=10, name='Bahdanau'):
+    def __init__(self, hidden_size, use_tanh=False, C=10, name='Dot'):
         super(Attention, self).__init__()
 
         self.use_tanh = use_tanh
@@ -186,8 +186,8 @@ class Decoder(nn.Module):
         self.input_weights = nn.Linear(embedding_dim, 4 * hidden_dim)
         self.hidden_weights = nn.Linear(hidden_dim, 4 * hidden_dim)
 
-        self.pointer = AttentionB(hidden_dim, use_tanh=use_tanh, C=tanh_exploration)
-        self.glimpse = AttentionB(hidden_dim, use_tanh=False)
+        self.pointer = Attention(hidden_dim, use_tanh=use_tanh, C=tanh_exploration)
+        self.glimpse = Attention(hidden_dim, use_tanh=False)
         self.sm = nn.Softmax()
 
     def apply_mask_to_logits(self, step, logits, mask, prev_idxs):
@@ -233,12 +233,12 @@ class Decoder(nn.Module):
 
             g_l = hy
             for i in range(self.n_glimpses):
-                ref, logits = self.glimpse(g_l, context)
+                ref, logits = self.glimpse(g_l, context.permute(1, 0, 2))
                 logits, logit_mask = self.apply_mask_to_logits(step, logits, logit_mask, prev_idxs)
                 # [batch_size x h_dim x sourceL] * [batch_size x sourceL x 1] =
                 # [batch_size x h_dim x 1]
                 g_l = torch.bmm(ref, self.sm(logits).unsqueeze(2)).squeeze(2)
-            _, logits = self.pointer(g_l, context)
+            _, logits = self.pointer(g_l, context.permute(1, 0, 2))
 
             logits, logit_mask = self.apply_mask_to_logits(step, logits, logit_mask, prev_idxs)
             probs = self.sm(logits)
@@ -461,7 +461,7 @@ class CriticNetwork(nn.Module):
             hidden_dim,
         )
 
-        self.process_block = AttentionB(hidden_dim, use_tanh=use_tanh, C=tanh_exploration)
+        self.process_block = Attention(hidden_dim, use_tanh=use_tanh, C=tanh_exploration)
         self.sm = nn.Softmax()
         self.decoder = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim),

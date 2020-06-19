@@ -122,7 +122,7 @@ class PointerNet(nn.Module):
     num_glimpse: int
     encoder: nn.RNNBase
     decoder: nn.RNNBase
-    ptr_net: Attention
+    pointer: Attention
     glimpse: Attention
     decoder_start_input: nn.Parameter
 
@@ -138,7 +138,7 @@ class PointerNet(nn.Module):
         self.num_glimpse = num_glimpse
         self.encoder = rnn_init(rnn_type, input_size = embedding_size, hidden_size=hidden_size, batch_first=True, bidirectional=False)
         self.decoder = rnn_init(rnn_type, input_size = embedding_size, hidden_size=hidden_size, batch_first=True, bidirectional=False)
-        self.ptr_net = Attention(hidden_size, use_tanh=use_tanh, C=tanh_exploration, name=attention)
+        self.pointer = Attention(hidden_size, use_tanh=use_tanh, C=tanh_exploration, name=attention)
         self.glimpse = Attention(hidden_size, use_tanh=False, name=attention)
 
         self.decoder_start_input = nn.Parameter(torch.FloatTensor(embedding_size))
@@ -201,7 +201,7 @@ class PointerNet(nn.Module):
                 logits, mask = self.apply_mask_to_logits(logits, mask, idxs)
                 query = torch.bmm(ref, F.softmax(logits, dim=1).unsqueeze(2)).squeeze(2)
 
-            _, logits = self.ptr_net(query, encoder_outputs)
+            _, logits = self.pointer(query, encoder_outputs)
             logits, mask = self.apply_mask_to_logits(logits, mask, idxs)
             probs = F.softmax(logits, dim=1)
 

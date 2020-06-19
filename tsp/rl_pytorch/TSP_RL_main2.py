@@ -27,6 +27,7 @@ USE_CUDA = False
 # 4. plot
 # 5. mask
 # 6. use_cuda gpu
+# https://medium.com/the-artificial-impostor/implementing-beam-search-part-1-4f53482daabe
 
 def rnn_init(rnn_type: str, **kwargs) -> nn.RNNBase:
     if rnn_type in ["LSTM", "GRU", "RNN"]:
@@ -244,8 +245,8 @@ class Decoder(nn.Module):
             return hy, cy, probs, logit_mask
 
         batch_size = context.size(1)
-        outputs = []
-        selections = []
+        outputs = []   # [seq_len][batch_size * seq_len]
+        selections = []  # [seq_len][batch_size]
         steps = range(self.max_length)  # or until terminating symbol ?
         inps = []
         idxs = None
@@ -256,10 +257,7 @@ class Decoder(nn.Module):
                 hx, cx, probs, mask = recurrence(decoder_input, hidden, mask, idxs, i)
                 hidden = (hx, cx)
                 # select the next inputs for the decoder [batch_size x hidden_dim]
-                decoder_input, idxs = self.decode_stochastic(
-                    probs,
-                    embedded_inputs,
-                    selections)
+                decoder_input, idxs = self.decode_stochastic(probs, embedded_inputs, selections)
                 inps.append(decoder_input)
                 # use outs to point to next object
                 outputs.append(probs)
@@ -283,8 +281,7 @@ class Decoder(nn.Module):
                 hx, cx, probs, mask = recurrence(decoder_input, hidden, mask, idxs, i)
                 hidden = (hx, cx)
 
-                probs = probs.view(self.beam_size, batch_size, -1
-                                   ).transpose(0, 1).contiguous()
+                probs = probs.view(self.beam_size, batch_size, -1).transpose(0, 1).contiguous()
 
                 n_best = 1
                 # select the next inputs for the decoder [batch_size x hidden_dim]
@@ -334,7 +331,7 @@ class Decoder(nn.Module):
                 idxs = probs.multinomial(1).squeeze(1)
                 break
 
-        sels = embedded_inputs[idxs.data, [i for i in range(batch_size)], :]
+        sels = embedded_inputs[idxs.data, [i for i in range(batch_size)], :]  # [batch_size * embedding_size]
         return sels, idxs
 
     def decode_beam(self, probs, embedded_inputs, beam, batch_size, n_best, step):
@@ -353,8 +350,8 @@ class Decoder(nn.Module):
             hyps = zip(*[beam[b].get_hyp(k) for k in ks[:n_best]])
             all_hyp += [hyps]
 
-        all_idxs = Variable(torch.LongTensor([[x for x in hyp] for hyp in all_hyp]).squeeze())
-
+        all_idxs = Variable(torch.LongTensor([[x for x in hyp] for hyp in all_hyp]).squeeze())  # [batch_size]
+        print(f'all_idx.dim {all_idxs.dim()}')
         if all_idxs.dim() == 2:
             if all_idxs.size(1) > n_best:
                 idxs = all_idxs[:, -1]
@@ -371,9 +368,10 @@ class Decoder(nn.Module):
         if idxs.dim() > 1:
             x = embedded_inputs[idxs.transpose(0, 1).contiguous().data,
                 [x for x in range(batch_size)], :]
+            return x.view(idxs.size(0) * n_best, embedded_inputs.size(2)), idxs, active
         else:
-            x = embedded_inputs[idxs.data, [x for x in range(batch_size)], :]
-        return x.view(idxs.size(0) * n_best, embedded_inputs.size(2)), idxs, active
+            x = embedded_inputs[idxs.data, [x for x in range(batch_size)], :]  # [batch_size * embedding_size]
+            return x, idxs, active
 
 
 class PointerNetwork(nn.Module):
@@ -589,6 +587,7 @@ class NeuralCombinatorialRL(nn.Module):
             # probs_ is a list of len sourceL of [batch_size x sourceL]
             probs = []
             for prob, action_id in zip(probs_, action_idxs):
+                print(f'{prob.shape} {action_id.data}')
                 probs.append(prob[[x for x in range(batch_size)], action_id.data])
         else:
             # return the list of len sourceL of [batch_size x sourceL]

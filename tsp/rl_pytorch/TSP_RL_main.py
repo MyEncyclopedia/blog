@@ -102,7 +102,7 @@ class GraphEmbedding(nn.Module):
         Args:
             batch_input: [batch_size * 2 * seq_len]
         Returns:
-            embedded: [batch_size, input_size, embedding_size]
+            embedded: [batch_size * input_size * embedding_size]
 
         """
         batch_size = batch_input.size(0)
@@ -230,7 +230,7 @@ class CombinatorialRL(nn.Module):
     def forward(self, batch_input: Tensor) -> Tuple[Tensor, List[Tensor], List[Tensor], List[Tensor]]:
         """
         Args:
-            batch_input: [batch_size, 2, seq_len]
+            batch_input: [batch_size * 2 * seq_len]
         Returns:
             R: Tensor of shape 32
             action_prob_list: [batch_size][seq_len]

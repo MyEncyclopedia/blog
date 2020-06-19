@@ -116,6 +116,126 @@ class GraphEmbedding(nn.Module):
         return embedded
 
 
+class Encoder(nn.Module):
+    """Maps a graph represented as an input sequence
+    to a hidden vector"""
+
+    def __init__(self, input_dim, hidden_dim):
+        super(Encoder, self).__init__()
+        self.hidden_dim = hidden_dim
+        self.lstm = nn.LSTM(input_dim, hidden_dim)
+        self.enc_init_state = self.init_hidden(hidden_dim)
+
+    def forward(self, x, hidden):
+        output, hidden = self.lstm(x, hidden)
+        return output, hidden
+
+    def init_hidden(self, hidden_dim):
+        """Trainable initial hidden state"""
+        enc_init_hx = Variable(torch.zeros(hidden_dim), requires_grad=False)
+
+        # enc_init_hx.data.uniform_(-(1. / math.sqrt(hidden_dim)),
+        #        1. / math.sqrt(hidden_dim))
+
+        enc_init_cx = Variable(torch.zeros(hidden_dim), requires_grad=False)
+
+        # enc_init_cx = nn.Parameter(enc_init_cx)
+        # enc_init_cx.data.uniform_(-(1. / math.sqrt(hidden_dim)),
+        #        1. / math.sqrt(hidden_dim))
+        return (enc_init_hx, enc_init_cx)
+
+
+
+class StochasticDecoder(nn.Module):
+    def __init__(self,
+                 embedding_size,
+                 hidden_size,
+                 max_length,
+                 num_glimpse,
+                 use_tanh,
+                 tanh_exploration,
+                 ):
+        super(StochasticDecoder, self).__init__()
+
+        self.embedding_dim = embedding_size
+        self.hidden_dim = hidden_size
+        self.num_glimpse = num_glimpse
+        self.max_length = max_length
+
+        self.rnn = rnn_init('GRU', input_size = embedding_size, hidden_size=hidden_size, batch_first=True, bidirectional=False)
+        self.decoder_start_input = nn.Parameter(torch.FloatTensor(embedding_size))
+        self.decoder_start_input.data.uniform_(-(1. / math.sqrt(embedding_size)), 1. / math.sqrt(embedding_size))
+        self.glimpse = Attention(hidden_size, use_tanh=False)
+        self.pointer = Attention(hidden_size, use_tanh=use_tanh, C=tanh_exploration)
+
+
+    def apply_mask_to_logits(self, logits: Tensor, mask: Tensor, idxs: Tensor) -> Tuple[Tensor, Tensor]:
+        """
+        Args:
+            logits: [batch_size * seq_len]
+            mask:   [batch_size * seq_len]
+            idxs:   None or tensor [batch_size]
+        Returns:
+            logits:      []
+            mask_clone:  []
+        """
+        batch_size = logits.size(0)
+        mask_clone = mask.clone()
+
+        if idxs is not None:
+            mask_clone[[i for i in range(batch_size)], idxs.data] = 1
+            logits[mask_clone] = -np.inf
+        return logits, mask_clone
+
+    def forward(self, decoder_input, batch_input, hidden, encoder_outputs):
+        """
+        Args:
+            decoder_input: The initial input to the decoder
+                size is [batch_size x embedding_dim]. Trainable parameter.
+            embedded_inputs: [batch_size * seq_len * embedding_dim]
+            hidden: the prev hidden state, size is [batch_size x hidden_dim].
+                Initially this is set to (enc_h[-1], enc_c[-1])
+            context: encoder outputs, [sourceL x batch_size x hidden_dim]
+        """
+        batch_size = batch_input.size(0)
+        seq_len = batch_input.size(1)
+        prob_list = []
+        action_idx_list = []
+        mask = torch.zeros(batch_size, seq_len).byte()
+        # mask = torch.zeros(batch_size, seq_len).bool()
+
+        idxs = None
+
+
+        for i in range(seq_len):
+            _, hidden = self.rnn(decoder_input.unsqueeze(1), hidden)
+
+            if isinstance(hidden, tuple):
+                query = hidden[0].squeeze(0)
+            else:
+                query = hidden.squeeze(0)
+            for i in range(self.num_glimpse):
+                ref, logits = self.glimpse(query, encoder_outputs)
+                logits, mask = self.apply_mask_to_logits(logits, mask, idxs)
+                query = torch.bmm(ref, F.softmax(logits, dim=1).unsqueeze(2)).squeeze(2)
+
+            _, logits = self.pointer(query, encoder_outputs)
+            logits, mask = self.apply_mask_to_logits(logits, mask, idxs)
+            probs = F.softmax(logits, dim=1)
+
+            idxs = probs.multinomial(1).squeeze(1)  # [batch_size]
+            for old_idxs in action_idx_list:
+                if old_idxs.eq(idxs).data.any():
+                    print(f'{seq_len} resample')
+                    idxs = probs.multinomial(1).squeeze(1)
+                    break
+            decoder_input = batch_input[[i for i in range(batch_size)], idxs.data, :]  # [batch_size * embedded_size]
+
+            prob_list.append(probs)
+            action_idx_list.append(idxs)
+
+        return prob_list, action_idx_list, hidden
+
 class PointerNet(nn.Module):
     use_embedding: bool
     embedding: GraphEmbedding
@@ -137,10 +257,7 @@ class PointerNet(nn.Module):
 
         self.num_glimpse = num_glimpse
         self.encoder = rnn_init(rnn_type, input_size = embedding_size, hidden_size=hidden_size, batch_first=True, bidirectional=False)
-        self.decoder = rnn_init(rnn_type, input_size = embedding_size, hidden_size=hidden_size, batch_first=True, bidirectional=False)
-        self.pointer = Attention(hidden_size, use_tanh=use_tanh, C=tanh_exploration, name=attention)
-        self.glimpse = Attention(hidden_size, use_tanh=False, name=attention)
-
+        self.decoder = StochasticDecoder(embedding_size, hidden_size, max_length=10, num_glimpse=num_glimpse, use_tanh=use_tanh, tanh_exploration=tanh_exploration)
         self.decoder_start_input = nn.Parameter(torch.FloatTensor(embedding_size))
         self.decoder_start_input.data.uniform_(-(1. / math.sqrt(embedding_size)), 1. / math.sqrt(embedding_size))
 
@@ -174,49 +291,16 @@ class PointerNet(nn.Module):
         seq_len = batch_input.size(2)
 
         if self.use_embedding:
-            embedded = self.embedding(batch_input)  # [batch_size * seq_len * embedded_size]
+            batch_input = self.embedding(batch_input)  # [batch_size * seq_len * embedded_size]
         else:
-            embedded = batch_input.permute(0, 2, 1)  # [batch_size * seq_len * embedded_size]
+            batch_input = batch_input.permute(0, 2, 1)  # [batch_size * seq_len * embedded_size]
 
-        encoder_outputs, hidden = self.encoder(embedded)
-
-        prob_list = []
-        action_idx_list = []
-        mask = torch.zeros(batch_size, seq_len).byte()
-        # mask = torch.zeros(batch_size, seq_len).bool()
-
-        idxs = None
+        encoder_outputs, hidden = self.encoder(batch_input)
 
         decoder_input = self.decoder_start_input.unsqueeze(0).repeat(batch_size, 1)
 
-        for i in range(seq_len):
-            _, hidden = self.decoder(decoder_input.unsqueeze(1), hidden)
-
-            if isinstance(hidden, tuple):
-                query = hidden[0].squeeze(0)
-            else:
-                query = hidden.squeeze(0)
-            for i in range(self.num_glimpse):
-                ref, logits = self.glimpse(query, encoder_outputs)
-                logits, mask = self.apply_mask_to_logits(logits, mask, idxs)
-                query = torch.bmm(ref, F.softmax(logits, dim=1).unsqueeze(2)).squeeze(2)
-
-            _, logits = self.pointer(query, encoder_outputs)
-            logits, mask = self.apply_mask_to_logits(logits, mask, idxs)
-            probs = F.softmax(logits, dim=1)
-
-            idxs = probs.multinomial(1).squeeze(1)  # [batch_size]
-            for old_idxs in action_idx_list:
-                if old_idxs.eq(idxs).data.any():
-                    print(f'{seq_len} resample')
-                    idxs = probs.multinomial(1).squeeze(1)
-                    break
-            decoder_input = embedded[[i for i in range(batch_size)], idxs.data, :]  # [batch_size * embedded_size]
-
-            prob_list.append(probs)
-            action_idx_list.append(idxs)
-
-        return prob_list, action_idx_list
+        pointer_probs, input_idxs, dec_hidden_t = self.decoder(decoder_input, batch_input, hidden, encoder_outputs)
+        return pointer_probs, input_idxs
 
 
 class CombinatorialRL(nn.Module):

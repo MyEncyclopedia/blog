@@ -23,7 +23,6 @@ USE_CUDA = False
 # 1. bidirectional True does not work
 # 2. mask
 # 3. plot
-# 4. beam search decoder
 # 5. critic net
 # 6. use_cuda gpu
 
@@ -116,58 +115,26 @@ class GraphEmbedding(nn.Module):
         return embedded
 
 
-class Encoder(nn.Module):
-    """Maps a graph represented as an input sequence
-    to a hidden vector"""
-
-    def __init__(self, input_dim, hidden_dim):
-        super(Encoder, self).__init__()
-        self.hidden_dim = hidden_dim
-        self.lstm = nn.LSTM(input_dim, hidden_dim)
-        self.enc_init_state = self.init_hidden(hidden_dim)
-
-    def forward(self, x, hidden):
-        output, hidden = self.lstm(x, hidden)
-        return output, hidden
-
-    def init_hidden(self, hidden_dim):
-        """Trainable initial hidden state"""
-        enc_init_hx = Variable(torch.zeros(hidden_dim), requires_grad=False)
-
-        # enc_init_hx.data.uniform_(-(1. / math.sqrt(hidden_dim)),
-        #        1. / math.sqrt(hidden_dim))
-
-        enc_init_cx = Variable(torch.zeros(hidden_dim), requires_grad=False)
-
-        # enc_init_cx = nn.Parameter(enc_init_cx)
-        # enc_init_cx.data.uniform_(-(1. / math.sqrt(hidden_dim)),
-        #        1. / math.sqrt(hidden_dim))
-        return (enc_init_hx, enc_init_cx)
+# class Encoder(nn.Module):
+#
+#     def __init__(self, input_dim, hidden_dim):
+#         super(Encoder, self).__init__()
+#         self.hidden_dim = hidden_dim
+#         self.lstm = nn.LSTM(input_dim, hidden_dim)
+#         self.enc_init_state = self.init_hidden(hidden_dim)
+#
+#     def forward(self, x, hidden):
+#         output, hidden = self.lstm(x, hidden)
+#         return output, hidden
+#
+#     def init_hidden(self, hidden_dim):
+#         enc_init_hidden = Variable(torch.zeros(hidden_dim), requires_grad=False)
+#
+#         enc_init_context = Variable(torch.zeros(hidden_dim), requires_grad=False)
+#         return (enc_init_hidden, enc_init_context)
 
 
-
-class StochasticDecoder(nn.Module):
-    def __init__(self,
-                 embedding_size,
-                 hidden_size,
-                 max_length,
-                 num_glimpse,
-                 use_tanh,
-                 tanh_exploration,
-                 ):
-        super(StochasticDecoder, self).__init__()
-
-        self.embedding_dim = embedding_size
-        self.hidden_dim = hidden_size
-        self.num_glimpse = num_glimpse
-        self.max_length = max_length
-
-        self.rnn = rnn_init('GRU', input_size = embedding_size, hidden_size=hidden_size, batch_first=True, bidirectional=False)
-        self.decoder_start_input = nn.Parameter(torch.FloatTensor(embedding_size))
-        self.decoder_start_input.data.uniform_(-(1. / math.sqrt(embedding_size)), 1. / math.sqrt(embedding_size))
-        self.glimpse = Attention(hidden_size, use_tanh=False)
-        self.pointer = Attention(hidden_size, use_tanh=use_tanh, C=tanh_exploration)
-
+class Decoder(nn.Module):
 
     def apply_mask_to_logits(self, logits: Tensor, mask: Tensor, idxs: Tensor) -> Tuple[Tensor, Tensor]:
         """
@@ -187,25 +154,38 @@ class StochasticDecoder(nn.Module):
             logits[mask_clone] = -np.inf
         return logits, mask_clone
 
+
+class StochasticDecoder(Decoder):
+    def __init__(self, embedding_size, hidden_size, num_glimpse, use_tanh, tanh_exploration):
+        super(StochasticDecoder, self).__init__()
+
+        self.embedding_size = embedding_size
+        self.hidden_size = hidden_size
+        self.num_glimpse = num_glimpse
+
+        self.rnn = rnn_init('GRU', input_size = embedding_size, hidden_size=hidden_size, batch_first=True, bidirectional=False)
+        self.decoder_start_input = nn.Parameter(torch.FloatTensor(embedding_size))
+        self.decoder_start_input.data.uniform_(-(1. / math.sqrt(embedding_size)), 1. / math.sqrt(embedding_size))
+        self.glimpse = Attention(hidden_size, use_tanh=False)
+        self.pointer = Attention(hidden_size, use_tanh=use_tanh, C=tanh_exploration)
+
+
     def forward(self, decoder_input, batch_input, hidden, encoder_outputs):
         """
         Args:
-            decoder_input: The initial input to the decoder
-                size is [batch_size x embedding_dim]. Trainable parameter.
-            embedded_inputs: [batch_size * seq_len * embedding_dim]
-            hidden: the prev hidden state, size is [batch_size x hidden_dim].
-                Initially this is set to (enc_h[-1], enc_c[-1])
-            context: encoder outputs, [sourceL x batch_size x hidden_dim]
+            decoder_input: [batch_size x embedding_size]
+            batch_input: [batch_size * seq_len * embedding_dim]
+            hidden: the prev hidden state,[batch_size * hidden_size].
+            encoder_outputs: [batch_size * seq_len * hidden_size]
         """
         batch_size = batch_input.size(0)
         seq_len = batch_input.size(1)
         prob_list = []
         action_idx_list = []
-        mask = torch.zeros(batch_size, seq_len).byte()
-        # mask = torch.zeros(batch_size, seq_len).bool()
+        # mask = torch.zeros(batch_size, seq_len).byte()
+        mask = torch.zeros(batch_size, seq_len).bool()
 
         idxs = None
-
 
         for i in range(seq_len):
             _, hidden = self.rnn(decoder_input.unsqueeze(1), hidden)
@@ -236,6 +216,45 @@ class StochasticDecoder(nn.Module):
 
         return prob_list, action_idx_list, hidden
 
+
+class BeamDecoder(Decoder):
+    def __init__(self, embedding_size, hidden_size, num_glimpse, use_tanh, tanh_exploration):
+        super(BeamDecoder, self).__init__()
+
+        self.embedding_size = embedding_size
+        self.hidden_size = hidden_size
+        self.num_glimpse = num_glimpse
+
+        self.rnn = rnn_init('GRU', input_size = embedding_size, hidden_size=hidden_size, batch_first=True, bidirectional=False)
+        self.decoder_start_input = nn.Parameter(torch.FloatTensor(embedding_size))
+        self.decoder_start_input.data.uniform_(-(1. / math.sqrt(embedding_size)), 1. / math.sqrt(embedding_size))
+        self.glimpse = Attention(hidden_size, use_tanh=False)
+        self.pointer = Attention(hidden_size, use_tanh=use_tanh, C=tanh_exploration)
+
+
+    def forward(self, decoder_input, batch_input, hidden, encoder_outputs):
+        """
+        Args:
+            decoder_input: [batch_size x embedding_size]
+            batch_input: [batch_size * seq_len * embedding_dim]
+            hidden: the prev hidden state,[batch_size * hidden_size].
+            encoder_outputs: [batch_size * seq_len * hidden_size]
+        """
+        batch_size = batch_input.size(0)
+        seq_len = batch_input.size(1)
+        prob_list = []
+        action_idx_list = []
+        # mask = torch.zeros(batch_size, seq_len).byte()
+        mask = torch.zeros(batch_size, seq_len).bool()
+
+        idxs = None
+
+        for i in range(seq_len):
+            pass
+
+        return prob_list, action_idx_list, hidden
+
+
 class PointerNet(nn.Module):
     use_embedding: bool
     embedding: GraphEmbedding
@@ -257,27 +276,10 @@ class PointerNet(nn.Module):
 
         self.num_glimpse = num_glimpse
         self.encoder = rnn_init(rnn_type, input_size = embedding_size, hidden_size=hidden_size, batch_first=True, bidirectional=False)
-        self.decoder = StochasticDecoder(embedding_size, hidden_size, max_length=10, num_glimpse=num_glimpse, use_tanh=use_tanh, tanh_exploration=tanh_exploration)
+        self.decoder = StochasticDecoder(embedding_size, hidden_size, num_glimpse=num_glimpse, use_tanh=use_tanh, tanh_exploration=tanh_exploration)
         self.decoder_start_input = nn.Parameter(torch.FloatTensor(embedding_size))
         self.decoder_start_input.data.uniform_(-(1. / math.sqrt(embedding_size)), 1. / math.sqrt(embedding_size))
 
-    def apply_mask_to_logits(self, logits: Tensor, mask: Tensor, idxs: Tensor) -> Tuple[Tensor, Tensor]:
-        """
-        Args:
-            logits: [batch_size * seq_len]
-            mask:   [batch_size * seq_len]
-            idxs:   None or tensor [batch_size]
-        Returns:
-            logits:      []
-            mask_clone:  []
-        """
-        batch_size = logits.size(0)
-        mask_clone = mask.clone()
-
-        if idxs is not None:
-            mask_clone[[i for i in range(batch_size)], idxs.data] = 1
-            logits[mask_clone] = -np.inf
-        return logits, mask_clone
 
     def forward(self, batch_input: Tensor) -> Tuple[List[Tensor], List[Tensor]]:
         """
@@ -296,9 +298,7 @@ class PointerNet(nn.Module):
             batch_input = batch_input.permute(0, 2, 1)  # [batch_size * seq_len * embedded_size]
 
         encoder_outputs, hidden = self.encoder(batch_input)
-
         decoder_input = self.decoder_start_input.unsqueeze(0).repeat(batch_size, 1)
-
         pointer_probs, input_idxs, dec_hidden_t = self.decoder(decoder_input, batch_input, hidden, encoder_outputs)
         return pointer_probs, input_idxs
 

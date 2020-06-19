@@ -20,6 +20,7 @@ from rl_pytorch.TSP_dataset import TSPDataset, TSPUnlabeledDataset
 USE_CUDA = False
 
 # todo:
+# 1. bidirectional True does not work
 # 2. mask
 # 3. plot
 # 4. beam search decoder
@@ -135,10 +136,8 @@ class PointerNet(nn.Module):
             embedding_size = 2
 
         self.num_glimpse = num_glimpse
-        self.encoder = nn.LSTM(embedding_size, hidden_size, batch_first=True)
-        # self.decoder = nn.LSTM(embedding_size, hidden_size, batch_first=True)
-        self.encoder = rnn_init(rnn_type, input_size = embedding_size, hidden_size=hidden_size, batch_first=True)
-        self.decoder = rnn_init(rnn_type, input_size = embedding_size, hidden_size=hidden_size, batch_first=True)
+        self.encoder = rnn_init(rnn_type, input_size = embedding_size, hidden_size=hidden_size, batch_first=True, bidirectional=False)
+        self.decoder = rnn_init(rnn_type, input_size = embedding_size, hidden_size=hidden_size, batch_first=True, bidirectional=False)
         self.ptr_net = Attention(hidden_size, use_tanh=use_tanh, C=tanh_exploration, name=attention)
         self.glimpse = Attention(hidden_size, use_tanh=False, name=attention)
 
@@ -179,7 +178,7 @@ class PointerNet(nn.Module):
         else:
             embedded = batch_input.permute(0, 2, 1)  # [batch_size * seq_len * embedded_size]
 
-        encoder_outputs, (hidden, context) = self.encoder(embedded)
+        encoder_outputs, hidden = self.encoder(embedded)
 
         prob_list = []
         action_idx_list = []
@@ -191,9 +190,12 @@ class PointerNet(nn.Module):
         decoder_input = self.decoder_start_input.unsqueeze(0).repeat(batch_size, 1)
 
         for i in range(seq_len):
-            _, (hidden, context) = self.decoder(decoder_input.unsqueeze(1), (hidden, context))
+            _, hidden = self.decoder(decoder_input.unsqueeze(1), hidden)
 
-            query = hidden.squeeze(0)
+            if isinstance(hidden, tuple):
+                query = hidden[0].squeeze(0)
+            else:
+                query = hidden.squeeze(0)
             for i in range(self.num_glimpse):
                 ref, logits = self.glimpse(query, encoder_outputs)
                 logits, mask = self.apply_mask_to_logits(logits, mask, idxs)
@@ -291,7 +293,7 @@ if __name__ == "__main__":
     parser.add_argument("--validate_filename", type=str, default="../tsp_10_test_sample.txt")
     parser.add_argument("--clip_norm", type=float, default=2.)
     parser.add_argument("--threshold", type=float, default=3.99)
-    parser.add_argument("--rnn_type", type=str, default='LSTM')
+    parser.add_argument("--rnn_type", type=str, default='GRU')
     parser.add_argument("--log_dir", type=str, default="./log")
 
     args = parser.parse_args()

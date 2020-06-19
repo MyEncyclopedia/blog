@@ -84,6 +84,7 @@ class Beam(object):
         self.nextYs.append(bestScoresId - prev_k * num_words)
 
         self.current_step += 1
+        print(f'{self.current_step}: prevKs={self.prevKs}, nextYs={self.nextYs}')
         # End condition is when top-of-beam is EOS.
         if self.current_step == self.steps:
             self.done = True

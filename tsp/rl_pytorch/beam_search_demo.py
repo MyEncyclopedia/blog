@@ -1,9 +1,7 @@
 from copy import deepcopy
 from math import exp
-
 import torch
 from onmt.translate import BeamSearch, GNMTGlobalScorer
-
 
 def run_example():
     BEAM_SIZE = 2

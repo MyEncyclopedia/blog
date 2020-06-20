@@ -260,7 +260,7 @@ class PointerNet(nn.Module):
     embedding: GraphEmbedding
     num_glimpse: int
     encoder: nn.RNNBase
-    decoder: nn.RNNBase
+    decoder: Decoder
     pointer: Attention
     glimpse: Attention
     decoder_start_input: nn.Parameter
@@ -317,13 +317,12 @@ class CombinatorialRL(nn.Module):
             batch_input: [batch_size * 2 * seq_len]
         Returns:
             R: Tensor of shape 32
-            action_prob_list: [batch_size][seq_len]
-            action_list:      [batch_size*2][seq_len]
-            action_idx_list:  [batch_size][seq_len]
+            action_prob_list: List of [seq_len], tensor shape [batch_size]
+            action_list:      List of [seq_len], tensor shape [batch_size * 2]
+            action_idx_list:  List of [seq_len], tensor shape [batch_size]
         """
         batch_size = batch_input.size(0)
         seq_len = batch_input.size(2)
-
         prob_list, action_idx_list = self.actor(batch_input)
 
         action_list = []
@@ -343,7 +342,7 @@ class CombinatorialRL(nn.Module):
         """
         Computes total distance of tour
         Args:
-            sample_solution: list of size N, each tensor of shape [batch_size*2]
+            sample_solution: list of size N, each tensor of shape [batch_size * 2]
 
         Returns:
             tour_len: [32]

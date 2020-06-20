@@ -9,7 +9,8 @@ def run_example():
     BATCH_SZ = 1
     SEQ_LEN = 3
 
-    transition = [
+    initial = [0.35, 0.25, 0.4]
+    transition_matrix = [
         [0.3, 0.6, 0.1],
         [0.4, 0.2, 0.4],
         [0.3, 0.4, 0.4]]
@@ -18,25 +19,29 @@ def run_example():
     device_init = torch.zeros(1, 1)
     beam.initialize(device_init, torch.randint(0, 30, (BATCH_SZ,)))
 
-    init_scores = torch.log(torch.tensor([[0.35, 0.25, 0.4]], dtype=torch.float))
+    def printBestNPaths(beam: BeamSearch, step: int):
+        print(f'\nstep {step} beam results:')
+        for k in range(BEAM_SIZE):
+            best_path = beam.alive_seq[k].squeeze().tolist()[1:]
+            prob = exp(beam.topk_log_probs[0][k])
+            print(f'prob {prob:.3f} with path {best_path}')
+
+    init_scores = torch.log(torch.tensor([initial], dtype=torch.float))
     init_scores = deepcopy(init_scores.repeat(BATCH_SZ * BEAM_SIZE, 1))
     beam.advance(init_scores, None)
+    printBestNPaths(beam, 0)
 
     for step in range(SEQ_LEN - 1):
         idx_list = beam.topk_ids.squeeze().tolist()
         beam_transition = []
         for idx in idx_list:
-            beam_transition.append(transition[idx])
+            beam_transition.append(transition_matrix[idx])
         beam_transition_tensor = torch.log(torch.tensor(beam_transition))
 
         beam.advance(beam_transition_tensor, None)
         beam.update_finished()
 
-        print(f'step {step} beam results')
-        for k in range(BEAM_SIZE):
-            best_path = beam.alive_seq[k].squeeze().tolist()[1:]
-            prob = exp(beam.topk_log_probs[0][k])
-            print(f'prob {prob:.3f} with path {best_path}')
+        printBestNPaths(beam, step + 1)
 
 
 if __name__ == "__main__":

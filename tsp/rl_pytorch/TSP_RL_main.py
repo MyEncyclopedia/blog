@@ -316,7 +316,7 @@ class CombinatorialRL(nn.Module):
         Args:
             batch_input: [batch_size * 2 * seq_len]
         Returns:
-            R: Tensor of shape 32
+            R: Tensor of shape [batch_size]
             action_prob_list: List of [seq_len], tensor shape [batch_size]
             action_list:      List of [seq_len], tensor shape [batch_size * 2]
             action_idx_list:  List of [seq_len], tensor shape [batch_size]
@@ -345,7 +345,7 @@ class CombinatorialRL(nn.Module):
             sample_solution: list of size N, each tensor of shape [batch_size * 2]
 
         Returns:
-            tour_len: [32]
+            tour_len: [batch_size]
 
         """
         batch_size = sample_solution[0].size(0)

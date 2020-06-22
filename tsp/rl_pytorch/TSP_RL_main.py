@@ -9,10 +9,8 @@ import torch.optim as optim
 from torch import Tensor
 import torch.autograd as autograd
 import torch.nn.functional as F
-from IPython.core.display import clear_output
 from torch.autograd import Variable
 from torch.utils.data import Dataset, DataLoader
-import matplotlib.pyplot as plt
 # plt.switch_backend('agg')
 
 from rl_pytorch.TSP_dataset import TSPDataset, TSPUnlabeledDataset

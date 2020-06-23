@@ -102,28 +102,57 @@ def my_lru_cache(*args, **kwargs):
 
     return decorator
 
+nodes = []
+def graph_lru_cache(*args, **kwargs):
+    def decorator(f):
+        @functools.lru_cache(*args)
+        def function(*args, **kwargs):
+            _, l, r, parent_l, parent_r = args
+            node_label = f'{l}-{r}'
+            node_label_parent = f'{parent_l}-{parent_r}'
+            if not node_label in nodes:
+                nodes.append(node_label)
+            print(f'{node_label} -> {node_label_parent}')
+
+            return f(*args, **kwargs)
+
+        return function
+
+    return decorator
+
 class Solution:
 
-    # @mylru_cache(maxsize=None)
-    # @multiple_decorators(maxsize=None)
-    @lru_cache_ignoring_first_argument(maxsize=None)
-    def maxDiff(self, l: int, r:int) -> int:
+    # @my_lru_cache(maxsize=None)
+    # def maxDiff(self, l: int, r:int) -> int:
+    #     if l == r:
+    #         return self.nums[l]
+    #     return max(self.nums[l] - self.maxDiff(l + 1, r), self.nums[r] - self.maxDiff(l, r - 1))
+    #
+    # def PredictTheWinner(self, nums: List[int]) -> bool:
+    #     self.nums = nums
+    #     return self.maxDiff(0, len(nums) - 1) >= 0
+
+
+    @graph_lru_cache(maxsize=None)
+    def maxDiff(self, l: int, r:int, parent_l: int, parent_r: int) -> int:
         if l == r:
             return self.nums[l]
-        return max(self.nums[l] - self.maxDiff(l + 1, r), self.nums[r] - self.maxDiff(l, r - 1))
+        return max(self.nums[l] - self.maxDiff(l + 1, r, l, r), self.nums[r] - self.maxDiff(l, r - 1, l, r))
 
     def PredictTheWinner(self, nums: List[int]) -> bool:
         self.nums = nums
-        return self.maxDiff(0, len(nums) - 1) >= 0
+        return self.maxDiff(0, len(nums) - 1, None, None) >= 0
 
 
-
+def run_graphviz():
+    from graphviz import Digraph
+    g = Digraph('G', filename='hello.gv', format='svg')
+    g.edge('Hello', 'World')
+    g.view()
 
 if __name__ == "__main__":
+    # run_graphviz()
     nums = [1, 5, 2]
     s = Solution()
     print(s.PredictTheWinner(nums))
-    # from graphviz import Digraph
-    # g = Digraph('G', filename='hello.gv')
-    # g.edge('Hello', 'World')
-    # g.view()
+

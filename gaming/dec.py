@@ -3,8 +3,6 @@ import inspect
 from functools import lru_cache
 from typing import List
 
-
-
 class _MEquals(object):
     def __init__(self, parent_l, parent_r, pid, id):
         self.parent_l = parent_l
@@ -35,33 +33,6 @@ def lru_cache_ignoring_argument(*args, **kwargs):
 
     return decorator
 
-# class _Equals(object):
-#     def __init__(self, o):
-#         self.obj = o
-#
-#     def __eq__(self, other):
-#         return True
-#
-#     def __hash__(self):
-#         return 0
-#
-# def lru_cache_ignoring_first_argument(*args, **kwargs):
-#     lru_decorator = functools.lru_cache(*args, **kwargs)
-#
-#     def decorator(f):
-#         @lru_decorator
-#         def helper(arg1, *args, **kwargs):
-#             arg1 = arg1.obj
-#             return f(arg1, *args, **kwargs)
-#
-#         @functools.wraps(f)
-#         def function(arg1, *args, **kwargs):
-#             arg1 = _Equals(arg1)
-#             return helper(arg1, *args, **kwargs)
-#
-#         return function
-#
-#     return decorator
 
 def my_lru_cache(*args, **kwargs):
     def decorator(f):

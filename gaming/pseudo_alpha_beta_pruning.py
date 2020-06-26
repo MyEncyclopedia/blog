@@ -1,9 +1,9 @@
 
-def alphabeta(node: Node, depth: int, α: int, β: int, maximizingPlayer: bool) -> int:
+def alpha_beta(node: Node, depth: int, α: int, β: int, maximizingPlayer: bool) -> int:
     if depth == 0 or is_terminal(node):
         return evaluate_terminal(node)
     if maximizingPlayer:
-        value: int =  math.inf
+        value: int = −∞
         for child in node:
             value = max(value, alphabeta(child, depth − 1, α, β, False))
             α = max(α, value)
@@ -11,7 +11,7 @@ def alphabeta(node: Node, depth: int, α: int, β: int, maximizingPlayer: bool) 
                 break # β cut-off
         return value
     else:
-        value: int = math.inf
+        value: int = +∞
         for child in node:
             value = min(value, alphabeta(child, depth − 1, α, β, True))
             β = min(β, value)

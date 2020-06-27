@@ -1,4 +1,3 @@
-from functools import lru_cache
 from typing import List
 
 # TLE
@@ -16,6 +15,8 @@ class Solution_BruteForce:
 # AC
 # Time Complexity: O(n^2)
 class Solution:
+    from functools import lru_cache
+
     @lru_cache(maxsize=None)
     def maxDiff(self, l: int, r:int) -> int:
         if l == r:

@@ -1,6 +1,6 @@
 import pygame
 
-from Lesson04.Gomoku.Chessboard import Chessboard
+from gomoku_gym.Chessboard import Chessboard
 
 
 class Gomoku():
@@ -11,7 +11,7 @@ class Gomoku():
         self.screen = pygame.display.set_mode((800, 600))
         pygame.display.set_caption("五子棋")
         self.clock = pygame.time.Clock()
-        self.font = pygame.font.Font(r"C:\Windows\Fonts\consola.ttf", 24)
+        self.font = pygame.font.Font(pygame.font.get_default_font(), 24)
         self.going = True
 
         self.chessboard = Chessboard()

@@ -11,6 +11,7 @@ class Chessboard:
         self.piece = 'b'
         self.winner = None
         self.game_over = False
+        self.action_done = False
 
         self.grid = []
         for i in range(self.grid_count):
@@ -29,6 +30,7 @@ class Chessboard:
                 c = int(x // self.grid_size)
                 if self.set_piece(r, c):
                     self.check_win(r, c)
+                    self.action_done = True
 
     def set_piece(self, r, c):
         if self.grid[r][c] == '.':

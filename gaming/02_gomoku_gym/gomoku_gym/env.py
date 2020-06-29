@@ -3,6 +3,8 @@ import logging
 import gym
 from gym import spaces
 
+from gomoku_gym.Gomoku import Gomoku
+
 CODE_MARK_MAP = {0: ' ', 1: 'O', 2: 'X'}
 NUM_LOC = 9
 O_REWARD = 1
@@ -95,6 +97,8 @@ class GomokuEnv(gym.Env):
         self.show_number = show_number
         self.seed()
         self.reset()
+        self.game = Gomoku()
+        self.id = 1
 
     def set_start_mark(self, mark):
         self.start_mark = mark
@@ -143,14 +147,21 @@ class GomokuEnv(gym.Env):
         return tuple(self.board), self.mark
 
     def render(self, mode='human', close=False):
-        if close:
-            return
-        if mode == 'human':
-            self._show_board(print)  # NOQA
-            print('')
-        else:
-            self._show_board(logging.info)
-            logging.info('')
+        self.game.chessboard.action_done = False
+        while not self.game.chessboard.action_done:
+            self.game.update()
+            self.game.draw()
+            self.game.clock.tick(60)
+        print('quit render')
+        return self.id
+        # if close:
+        #     return
+        # if mode == 'human':
+        #     self._show_board(print)  # NOQA
+        #     print('')
+        # else:
+        #     self._show_board(logging.info)
+        #     logging.info('')
 
     def show_episode(self, human, episode):
         self._show_episode(print if human else logging.warning, episode)

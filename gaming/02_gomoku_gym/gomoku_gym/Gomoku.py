@@ -9,7 +9,7 @@ class Gomoku():
         pygame.init()
 
         self.screen = pygame.display.set_mode((800, 600))
-        pygame.display.set_caption("五子棋")
+        pygame.display.set_caption("")
         self.clock = pygame.time.Clock()
         self.font = pygame.font.Font(pygame.font.get_default_font(), 24)
         self.going = True

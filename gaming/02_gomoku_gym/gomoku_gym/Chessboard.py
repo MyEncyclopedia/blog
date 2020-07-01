@@ -3,11 +3,11 @@ import pygame
 
 class Chessboard:
 
-    def __init__(self):
-        self.grid_size = 26
+    def __init__(self, grid_count=5, connect_num=3):
+        self.grid_size = 10
         self.start_x, self.start_y = 30, 50
         self.edge_size = self.grid_size / 2
-        self.grid_count = 19
+        self.grid_count = grid_count
         self.piece = 'b'
         self.winner = None
         self.game_over = False
@@ -80,7 +80,6 @@ class Chessboard:
         return result
 
     def draw(self, screen):
-        # 棋盤底色
         pygame.draw.rect(screen, (185, 122, 87),
                          [self.start_x - self.edge_size, self.start_y - self.edge_size,
                           (self.grid_count - 1) * self.grid_size + self.edge_size * 2, (self.grid_count - 1) * self.grid_size + self.edge_size * 2], 0)

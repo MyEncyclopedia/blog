@@ -5,6 +5,7 @@ class Chessboard:
 
     def __init__(self, grid_count=5, connect_num=3):
         self.grid_size = 10
+        self.connect_num = connect_num
         self.start_x, self.start_y = 30, 50
         self.edge_size = self.grid_size / 2
         self.grid_count = grid_count
@@ -57,8 +58,8 @@ class Chessboard:
         ne_count = self.get_continuous_count(r, c, -1, 1)
         sw_count = self.get_continuous_count(r, c, 1, -1)
 
-        if (n_count + s_count + 1 >= 5) or (e_count + w_count + 1 >= 5) or \
-                (se_count + nw_count + 1 >= 5) or (ne_count + sw_count + 1 >= 5):
+        if (n_count + s_count + 1 >= self.connect_num) or (e_count + w_count + 1 >= self.connect_num) or \
+                (se_count + nw_count + 1 >= self.connect_num) or (ne_count + sw_count + 1 >= self.connect_num):
             self.winner = self.grid[r][c]
             self.game_over = True
 

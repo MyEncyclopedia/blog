@@ -1,7 +1,7 @@
 import gym
 from gym import spaces
 
-from gomoku_gym.Chessboard import Chessboard
+from gomoku_gym.PyGameChessboard import Chessboard
 
 
 class GomokuEnv(gym.Env):

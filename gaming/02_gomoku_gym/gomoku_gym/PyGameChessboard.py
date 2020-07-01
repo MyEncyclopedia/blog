@@ -26,13 +26,14 @@ class Chessboard:
         self.going = True
 
 
-    def loop(self):
-        while self.going:
+    def next_step(self):
+        self.action_done = False
+        while not self.action_done:
             self.update()
-            self.draw_()
+            self.render()
             self.clock.tick(60)
-
-        pygame.quit()
+        self.action_done = True
+        # todo return current action
 
     def update(self):
         for e in pygame.event.get():
@@ -41,7 +42,7 @@ class Chessboard:
             elif e.type == pygame.MOUSEBUTTONDOWN:
                 self.handle_key_event(e)
 
-    def draw_(self):
+    def render(self):
         self.screen.fill((255, 255, 255))
         self.screen.blit(self.font.render("FPS: {0:.2F}".format(self.clock.get_fps()), True, (0, 0, 0)), (10, 10))
 
@@ -142,4 +143,8 @@ class Chessboard:
 
 if __name__ == '__main__':
     game = Chessboard()
-    game.loop()
+    while game.going:
+        game.next_step()
+
+    pygame.quit()
+

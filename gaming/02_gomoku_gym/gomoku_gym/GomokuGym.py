@@ -3,6 +3,9 @@ from gym import spaces
 
 from gomoku_gym.PyGameBoard import GameBoard
 
+O_REWARD = 1
+X_REWARD = -1
+NO_REWARD = 0
 
 class GomokuEnv(gym.Env):
 
@@ -18,11 +21,9 @@ class GomokuEnv(gym.Env):
         self.reset()
 
     def reset(self):
-        # self.board = [0] * self.grid_num * self.grid_num
         self.done = False
-
         self.board_game = GameBoard(board_num=self.grid_num, connect_num=self.connect_num)
-        return self._get_obs()
+        return self.get_state()
 
     def step(self, action):
         """Step environment by action.
@@ -36,47 +37,38 @@ class GomokuEnv(gym.Env):
             bool: Done
             dict: Additional information
         """
-        assert self.action_space.contains(action)
+        # assert self.action_space.contains(action)
 
-        loc = action
-        if self.done:
-            return self._get_obs(), 0, True, None
+        piece, r, c = action
+        # loc = action
+        # if self.done:
+        #     return self._get_obs(), 0, True, None
 
         reward = NO_REWARD
         # place
-        self.board[loc] = tocode(self.mark)
-        status = check_game_status(self.board)
-        logging.debug("check_game_status board {} mark '{}'"
-                      " status {}".format(self.board, self.mark, status))
-        if status >= 0:
-            self.done = True
-            if status in [1, 2]:
-                # always called by self
-                reward = O_REWARD if self.mark == 'O' else X_REWARD
+        self.board_game.set_piece(r, c)
+        self.board_game.check_win()
+        if self.board_game.game_over:
+            reward = O_REWARD if piece == 'O' else X_REWARD
 
-        # switch turn
-        self.mark = next_mark(self.mark)
-        return self._get_obs(), reward, self.done, None
+        return self.get_state(), reward, self.done, None
 
-    def _get_obs(self):
-        return tuple(self.board), self.mark
+    def get_state(self):
+        return self.board_game.board, self.board_game.piece
 
     def render(self, mode='human', close=False):
-        self.game.chessboard.action_done = False
-        while not self.game.chessboard.action_done:
-            self.game.update()
-            self.game.draw()
-            self.game.clock.tick(60)
-        print('quit render')
-        return self.id
+        self.action = self.board_game.next_user_input()
+        return self.action
+
         # if close:
         #     return
         # if mode == 'human':
-        #     self._show_board(print)  # NOQA
+        #     # self._show_board(print)  # NOQA
         #     print('')
         # else:
-        #     self._show_board(logging.info)
-        #     logging.info('')
+        #     pass
+        #     # self._show_board(logging.info)
+        #     # logging.info('')
 
     def available_actions(self):
         return [i for i, c in enumerate(self.board) if c == 0]

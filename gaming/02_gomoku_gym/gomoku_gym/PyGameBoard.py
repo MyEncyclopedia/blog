@@ -2,6 +2,8 @@ import pygame
 
 
 class GameBoard:
+    PIECE_B = 'b'
+    PIECE_W = 'w'
 
     def __init__(self, board_num=5, connect_num=3):
         self.grid_size = 10
@@ -9,7 +11,7 @@ class GameBoard:
         self.start_x, self.start_y = 30, 50
         self.edge_size = self.grid_size / 2
         self.board_num = board_num
-        self.piece = 'b'
+        self.piece = GameBoard.PIECE_B
         self.winner = None
         self.game_over = False
         self.action = None
@@ -41,6 +43,21 @@ class GameBoard:
             elif e.type == pygame.MOUSEBUTTONDOWN:
                 self.handle_key_event(e)
 
+    def next_user_input(self):
+        self.action = None
+        while not self.action:
+            self.wait_user_input()
+            self.render()
+            self.clock.tick(60)
+        return self.action
+
+    def wait_user_input(self):
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT:
+                self.going = False
+            elif e.type == pygame.MOUSEBUTTONDOWN:
+                self.handle_user_input(e)
+
     def render(self):
         self.screen.fill((255, 255, 255))
         self.screen.blit(self.font.render("FPS: {0:.2F}".format(self.clock.get_fps()), True, (0, 0, 0)), (10, 10))
@@ -67,16 +84,35 @@ class GameBoard:
                 c = int(x // self.grid_size)
                 if self.set_piece(r, c):
                     self.check_win(r, c)
-                    self.action = (r, c)
+                    self.action = (self.piece, r, c)
+
+    def handle_user_input(self, e):
+        origin_x = self.start_x - self.edge_size
+        origin_y = self.start_y - self.edge_size
+        size = (self.board_num - 1) * self.grid_size + self.edge_size * 2
+        pos = e.pos
+        if origin_x <= pos[0] <= origin_x + size and origin_y <= pos[1] <= origin_y + size:
+            if not self.game_over:
+                x = pos[0] - origin_x
+                y = pos[1] - origin_y
+                r = int(y // self.grid_size)
+                c = int(x // self.grid_size)
+                valid = self.check_piece(r, c)
+                if valid:
+                    self.action = (self.piece, r, c)
+                    return self.action
+
+    def check_piece(self, r, c):
+        return self.board[r][c] == '.'
 
     def set_piece(self, r, c):
         if self.board[r][c] == '.':
             self.board[r][c] = self.piece
 
-            if self.piece == 'b':
-                self.piece = 'w'
+            if self.piece == GameBoard.PIECE_B:
+                self.piece = GameBoard.PIECE_W
             else:
-                self.piece = 'b'
+                self.piece = GameBoard.PIECE_B
 
             return True
         return False

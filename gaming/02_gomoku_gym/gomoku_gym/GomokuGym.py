@@ -3,9 +3,9 @@ from gym import spaces
 
 from gomoku_gym.PyGameBoard import GameBoard
 
-O_REWARD = 1
-X_REWARD = -1
-NO_REWARD = 0
+REWARD_W = 1
+REWARD_B = -1
+REWARD_NONE = 0
 
 class GomokuEnv(gym.Env):
 
@@ -39,17 +39,18 @@ class GomokuEnv(gym.Env):
         """
         # assert self.action_space.contains(action)
 
-        piece, r, c = action
+        r, c = action
         # loc = action
         # if self.done:
         #     return self._get_obs(), 0, True, None
 
-        reward = NO_REWARD
+        reward = REWARD_NONE
         # place
         self.board_game.set_piece(r, c)
-        self.board_game.check_win()
+        self.done = self.board_game.check_win()
         if self.board_game.game_over:
-            reward = O_REWARD if piece == 'O' else X_REWARD
+            reward = REWARD_W if self.board_game.piece == GameBoard.PIECE_W else REWARD_B
+        self.board_game.switch()
 
         return self.get_state(), reward, self.done, None
 

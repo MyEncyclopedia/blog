@@ -38,7 +38,8 @@ def play():
         done = False
         while not done:
             action = env.render()
-            # ava_actions = env.available_actions()
+            avail_actions = env.available_actions()
+            print(f'avail_actions = {avail_actions}')
             if action is None:
                 sys.exit()
 
@@ -49,8 +50,6 @@ def play():
             if done:
                 # env.show_result(True, mark, reward)
                 break
-            else:
-                _, mark = state
         episode += 1
 
 

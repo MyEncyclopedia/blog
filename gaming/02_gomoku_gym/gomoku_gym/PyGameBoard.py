@@ -84,7 +84,7 @@ class GameBoard:
                 c = int(x // self.grid_size)
                 if self.set_piece(r, c):
                     self.check_win(r, c)
-                    self.action = (self.piece, r, c)
+                    self.action = (r, c)
 
     def handle_user_input(self, e):
         origin_x = self.start_x - self.edge_size
@@ -99,7 +99,7 @@ class GameBoard:
                 c = int(x // self.grid_size)
                 valid = self.check_piece(r, c)
                 if valid:
-                    self.action = (self.piece, r, c)
+                    self.action = (r, c)
                     return self.action
 
     def check_piece(self, r, c):
@@ -108,14 +108,14 @@ class GameBoard:
     def set_piece(self, r, c):
         if self.board[r][c] == '.':
             self.board[r][c] = self.piece
-
-            if self.piece == GameBoard.PIECE_B:
-                self.piece = GameBoard.PIECE_W
-            else:
-                self.piece = GameBoard.PIECE_B
-
             return True
         return False
+
+    def switch(self):
+        if self.piece == GameBoard.PIECE_B:
+            self.piece = GameBoard.PIECE_W
+        else:
+            self.piece = GameBoard.PIECE_B
 
     def check_win(self, r, c):
         n_count = self.get_continuous_count(r, c, -1, 0)

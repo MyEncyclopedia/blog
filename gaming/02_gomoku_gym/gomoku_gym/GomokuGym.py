@@ -47,7 +47,7 @@ class GomokuEnv(gym.Env):
         reward = REWARD_NONE
         # place
         self.board_game.set_piece(r, c)
-        self.done = self.board_game.check_win()
+        self.done = self.board_game.check_win(r, c)
         if self.board_game.game_over:
             reward = REWARD_W if self.board_game.piece == GameBoard.PIECE_W else REWARD_B
         self.board_game.switch()
@@ -72,4 +72,4 @@ class GomokuEnv(gym.Env):
         #     # logging.info('')
 
     def available_actions(self):
-        return [i for i, c in enumerate(self.board) if c == 0]
+        return self.board_game.available_actions()

@@ -1,7 +1,7 @@
 import pygame
 
 
-class Chessboard:
+class GameBoard:
 
     def __init__(self, board_num=5, connect_num=3):
         self.grid_size = 10
@@ -144,7 +144,7 @@ class Chessboard:
 
 
 if __name__ == '__main__':
-    game = Chessboard()
+    game = GameBoard()
     while game.going:
         game.next_step()
 

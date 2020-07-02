@@ -1,7 +1,7 @@
 import gym
 from gym import spaces
 
-from gomoku_gym.PyGameChessboard import Chessboard
+from gomoku_gym.PyGameBoard import GameBoard
 
 
 class GomokuEnv(gym.Env):
@@ -12,7 +12,7 @@ class GomokuEnv(gym.Env):
         self.action_space = spaces.Discrete(grid_num* grid_num)
         self.observation_space = spaces.Discrete(grid_num * grid_num)
 
-        self.board_game = Chessboard(board_num=self.grid_num, connect_num=self.connect_num)
+        self.board_game = GameBoard(board_num=self.grid_num, connect_num=self.connect_num)
 
         self.seed()
         self.reset()
@@ -21,7 +21,7 @@ class GomokuEnv(gym.Env):
         # self.board = [0] * self.grid_num * self.grid_num
         self.done = False
 
-        self.board_game = Chessboard(board_num=self.grid_num, connect_num=self.connect_num)
+        self.board_game = GameBoard(board_num=self.grid_num, connect_num=self.connect_num)
         return self._get_obs()
 
     def step(self, action):

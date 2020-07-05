@@ -1,4 +1,5 @@
 import copy
+import math
 from typing import List, Tuple
 
 class ConnectNGame:
@@ -88,8 +89,40 @@ def recurse(game: ConnectNGame):
             gameClone = copy.deepcopy(game)
             result = not recurse(gameClone)
         finalResult = finalResult or result
+        if finalResult == True:
+            return True
     return finalResult
 
+def minimax(game: ConnectNGame, isMaxPlayer: bool) -> int:
+    """
+
+    :param game:
+    :param isMaxPlayer:
+    :return: 1, 0, -1
+    """
+    assert not game.gameEnded
+    if isMaxPlayer:
+        ret = - math.inf
+        for pos in game.getAvailablePositions():
+            result = game.action(*pos)
+            if result is None:
+                gameClone = copy.deepcopy(game)
+                result = not recurse(gameClone)
+            ret = max(ret, result)
+            if ret == 1:
+                return 1
+        return ret
+    else:
+        ret = math.inf
+        for pos in game.getAvailablePositions():
+            result = game.action(*pos)
+            if result is None:
+                gameClone = copy.deepcopy(game)
+                result = not recurse(gameClone)
+            ret = min(ret, result)
+            if ret == -1:
+                return -1
+        return ret
 
 
 if __name__ == '__main__':

@@ -104,10 +104,11 @@ def minimax(game: ConnectNGame, isMaxPlayer: bool) -> int:
     if isMaxPlayer:
         ret = - math.inf
         for pos in game.getAvailablePositions():
-            result = game.action(*pos)
+            gameClone = copy.deepcopy(game)
+            result = gameClone.action(*pos)
             if result is None:
-                gameClone = copy.deepcopy(game)
-                result = not recurse(gameClone)
+                assert not gameClone.gameEnded
+                result = not minimax(gameClone, not isMaxPlayer)
             ret = max(ret, result)
             if ret == 1:
                 return 1
@@ -115,10 +116,11 @@ def minimax(game: ConnectNGame, isMaxPlayer: bool) -> int:
     else:
         ret = math.inf
         for pos in game.getAvailablePositions():
-            result = game.action(*pos)
+            gameClone = copy.deepcopy(game)
+            result = gameClone.action(*pos)
             if result is None:
-                gameClone = copy.deepcopy(game)
-                result = not recurse(gameClone)
+                assert not gameClone.gameEnded
+                result = not minimax(gameClone, not isMaxPlayer)
             ret = min(ret, result)
             if ret == -1:
                 return -1
@@ -127,5 +129,6 @@ def minimax(game: ConnectNGame, isMaxPlayer: bool) -> int:
 
 if __name__ == '__main__':
     tic_tac_toe = ConnectNGame(N=3, board_size=3)
-    print(recurse(tic_tac_toe))
+    # print(recurse(tic_tac_toe))
+    print(minimax(tic_tac_toe, True))
 

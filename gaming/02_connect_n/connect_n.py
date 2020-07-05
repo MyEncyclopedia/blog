@@ -108,7 +108,7 @@ def minimax(game: ConnectNGame, isMaxPlayer: bool) -> int:
             result = gameClone.action(*pos)
             if result is None:
                 assert not gameClone.gameEnded
-                result = not minimax(gameClone, not isMaxPlayer)
+                result = minimax(gameClone, not isMaxPlayer)
             ret = max(ret, result)
             if ret == 1:
                 return 1
@@ -120,7 +120,7 @@ def minimax(game: ConnectNGame, isMaxPlayer: bool) -> int:
             result = gameClone.action(*pos)
             if result is None:
                 assert not gameClone.gameEnded
-                result = not minimax(gameClone, not isMaxPlayer)
+                result = minimax(gameClone, not isMaxPlayer)
             ret = min(ret, result)
             if ret == -1:
                 return -1

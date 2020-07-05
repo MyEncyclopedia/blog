@@ -1,7 +1,6 @@
 import copy
 from typing import List, Tuple
 
-
 class ConnectNGame:
 
     PLAYER_A = 1
@@ -54,8 +53,8 @@ class ConnectNGame:
         north_east = self.getConnectedNum(r, c, -1, 1)
         south_west = self.getConnectedNum(r, c, 1, -1)
 
-        if (north + south + 1 >= self.connect_num) or (east + west + 1 >= self.connect_num) or \
-                (south_east + north_west + 1 >= self.connect_num) or (north_east + south_west + 1 >= self.connect_num):
+        if (north + south + 1 >= self.N) or (east + west + 1 >= self.N) or \
+                (south_east + north_west + 1 >= self.N) or (north_east + south_west + 1 >= self.N):
             return True
         return False
 
@@ -66,7 +65,7 @@ class ConnectNGame:
         while True:
             new_r = r + dr * i
             new_c = c + dc * i
-            if 0 <= new_r < self.board_num and 0 <= new_c < self.board_num:
+            if 0 <= new_r < self.board_size and 0 <= new_c < self.board_size:
                 if self.board[new_r][new_c] == player:
                     result += 1
                 else:
@@ -94,6 +93,6 @@ def recurse(game: ConnectNGame):
 
 
 if __name__ == '__main__':
-    tic_tac_toe = ConnectNGame(n=3, board_size=3)
+    tic_tac_toe = ConnectNGame(N=3, board_size=3)
     print(recurse(tic_tac_toe))
 

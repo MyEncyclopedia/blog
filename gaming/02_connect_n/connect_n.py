@@ -169,7 +169,7 @@ def minimax(game: ConnectNGame, isMaxPlayer: bool) -> int:
 
 
 @lru_cache(maxsize=None)
-def minimax_dp(game: ConnectNGame) -> int:
+def minimax_dp(game: ConnectNGame, gameState) -> int:
     """
 
     :param game:
@@ -183,7 +183,7 @@ def minimax_dp(game: ConnectNGame) -> int:
             result = game.action(*pos)
             if result is None:
                 assert not game.gameEnded
-                result = minimax_dp(game)
+                result = minimax_dp(game, game.getStatus())
             game.undo()
             ret = max(ret, result)
             if ret == 1:
@@ -195,7 +195,7 @@ def minimax_dp(game: ConnectNGame) -> int:
             result = game.action(*pos)
             if result is None:
                 assert not game.gameEnded
-                result = minimax_dp(game)
+                result = minimax_dp(game, game.getStatus())
             game.undo()
             ret = min(ret, result)
             if ret == -1:
@@ -205,5 +205,5 @@ def minimax_dp(game: ConnectNGame) -> int:
 if __name__ == '__main__':
     tic_tac_toe = ConnectNGame(N=3, board_size=3)
     print(minimax(tic_tac_toe, True))
-    print(minimax_dp(tic_tac_toe))
+    print(minimax_dp(tic_tac_toe, tic_tac_toe.getStatus()))
 

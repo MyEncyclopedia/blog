@@ -4,6 +4,9 @@ from functools import lru_cache
 from typing import List, Tuple
 
 # 2. alpha beta pruning
+from connect_n_gym.lru_cache_filter import lru_cache_selected
+
+
 class ConnectNGame:
 
     PLAYER_A = 1
@@ -203,8 +206,68 @@ def minimax_dp(game: ConnectNGame, gameState) -> int:
                 return -1
         return ret
 
+@lru_cache_selected(maxsize=None, excludes=['alpha', 'beta'])
+def alpha_beta_dp(game: ConnectNGame, status, alpha = None, beta = None) -> int:
+    assert not game.gameOver
+    if game.currentPlayer == ConnectNGame.PLAYER_A:
+        ret = -math.inf
+        for pos in game.getAvailablePositions():
+            result = game.action(*pos)
+            if result is None:
+                assert not game.gameOver
+                result = alpha_beta_dp(game, game.getStatus(), alpha, beta)
+            game.undo()
+            alpha = max(alpha, result)
+            ret = max(ret, result)
+            if alpha >= beta or ret == 1:
+                return ret
+        return ret
+    else:
+        ret = math.inf
+        for pos in game.getAvailablePositions():
+            result = game.action(*pos)
+            if result is None:
+                assert not game.gameOver
+                result = alpha_beta_dp(game, game.getStatus(), alpha, beta)
+            game.undo()
+            beta = min(beta, result)
+            ret = min(ret, result)
+            if alpha >= beta or ret == -1:
+                return ret
+        return ret
+
+def alpha_beta(game: ConnectNGame, status, alpha = None, beta = None) -> int:
+    assert not game.gameOver
+    if game.currentPlayer == ConnectNGame.PLAYER_A:
+        ret = -math.inf
+        for pos in game.getAvailablePositions():
+            result = game.action(*pos)
+            if result is None:
+                assert not game.gameOver
+                result = alpha_beta(game, game.getStatus(), alpha, beta)
+            game.undo()
+            alpha = max(alpha, result)
+            ret = max(ret, result)
+            if alpha >= beta or ret == 1:
+                return ret
+        return ret
+    else:
+        ret = math.inf
+        for pos in game.getAvailablePositions():
+            result = game.action(*pos)
+            if result is None:
+                assert not game.gameOver
+                result = alpha_beta(game, game.getStatus(), alpha, beta)
+            game.undo()
+            beta = min(beta, result)
+            ret = min(ret, result)
+            if alpha >= beta or ret == -1:
+                return ret
+        return ret
+
 if __name__ == '__main__':
     tic_tac_toe = ConnectNGame(N=3, board_size=3)
-    print(minimax(tic_tac_toe, True))
-    print(minimax_dp(tic_tac_toe, tic_tac_toe.getStatus()))
+    # print(minimax(tic_tac_toe, True))
+    # print(minimax_dp(tic_tac_toe, tic_tac_toe.getStatus()))
+    print(alpha_beta(tic_tac_toe, tic_tac_toe.getStatus(), -math.inf, math.inf))
 

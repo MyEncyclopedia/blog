@@ -11,12 +11,11 @@ class PyGameBoard:
         self.grid_size = 10
         self.start_x, self.start_y = 30, 50
         self.edge_size = self.grid_size / 2
-        self.board_num = board_size
-        self.piece = PyGameBoard.PIECE_B
-        self.winner = None
-        self.game_over = False
-        self.action = None
+        self.board_size = board_size
         self.connectNGame = ConnectNGame(N=connect_num, board_size=board_size)
+        self.piece = ConnectNGame.PLAYER_A
+        # self.winner = None
+        self.action = None
 
         pygame.init()
 
@@ -62,7 +61,7 @@ class PyGameBoard:
         self.screen.blit(self.font.render("FPS: {0:.2F}".format(self.clock.get_fps()), True, (0, 0, 0)), (10, 10))
 
         self.draw(self.screen)
-        if self.game_over:
+        if self.connectNGame.gameOver:
             self.screen.blit(self.font.render("{0} Win".format("Black" if self.winner == 'b' else "White"), True, (0, 0, 0)), (500, 10))
 
         pygame.display.update()
@@ -73,58 +72,57 @@ class PyGameBoard:
     def handle_key_event(self, e):
         origin_x = self.start_x - self.edge_size
         origin_y = self.start_y - self.edge_size
-        size = (self.board_num - 1) * self.grid_size + self.edge_size * 2
+        size = (self.board_size - 1) * self.grid_size + self.edge_size * 2
         pos = e.pos
         if origin_x <= pos[0] <= origin_x + size and origin_y <= pos[1] <= origin_y + size:
-            if not self.game_over:
+            if not self.connectNGame.gameOver:
                 x = pos[0] - origin_x
                 y = pos[1] - origin_y
                 r = int(y // self.grid_size)
                 c = int(x // self.grid_size)
-                if self.set_piece(r, c):
-                    self.check_win(r, c)
-                    self.action = (r, c)
+                if self.connectNGame.action(r, c):
+                    pass
 
     def handle_user_input(self, e):
         origin_x = self.start_x - self.edge_size
         origin_y = self.start_y - self.edge_size
-        size = (self.board_num - 1) * self.grid_size + self.edge_size * 2
+        size = (self.board_size - 1) * self.grid_size + self.edge_size * 2
         pos = e.pos
         if origin_x <= pos[0] <= origin_x + size and origin_y <= pos[1] <= origin_y + size:
-            if not self.game_over:
+            if not self.connectNGame.gameOver:
                 x = pos[0] - origin_x
                 y = pos[1] - origin_y
                 r = int(y // self.grid_size)
                 c = int(x // self.grid_size)
-                valid = self.check_piece(r, c)
+                valid = self.connectNGame.checkAction(r, c)
                 if valid:
                     self.action = (r, c)
                     return self.action
 
-    def set_piece(self, r, c):
-        if self.board[r][c] == '.':
-            self.board[r][c] = self.piece
-            return True
-        return False
-
+    # def set_piece(self, r, c):
+    #     if self.board[r][c] == '.':
+    #         self.board[r][c] = self.piece
+    #         return True
+    #     return False
+    #
     def draw(self, screen):
         pygame.draw.rect(screen, (185, 122, 87),
                          [self.start_x - self.edge_size, self.start_y - self.edge_size,
-                          (self.board_num - 1) * self.grid_size + self.edge_size * 2, (self.board_num - 1) * self.grid_size + self.edge_size * 2], 0)
+                          (self.board_size - 1) * self.grid_size + self.edge_size * 2, (self.board_size - 1) * self.grid_size + self.edge_size * 2], 0)
 
-        for r in range(self.board_num):
+        for r in range(self.board_size):
             y = self.start_y + r * self.grid_size
-            pygame.draw.line(screen, (0, 0, 0), [self.start_x, y], [self.start_x + self.grid_size * (self.board_num - 1), y], 2)
+            pygame.draw.line(screen, (0, 0, 0), [self.start_x, y], [self.start_x + self.grid_size * (self.board_size - 1), y], 2)
 
-        for c in range(self.board_num):
+        for c in range(self.board_size):
             x = self.start_x + c * self.grid_size
-            pygame.draw.line(screen, (0, 0, 0), [x, self.start_y], [x, self.start_y + self.grid_size * (self.board_num - 1)], 2)
+            pygame.draw.line(screen, (0, 0, 0), [x, self.start_y], [x, self.start_y + self.grid_size * (self.board_size - 1)], 2)
 
-        for r in range(self.board_num):
-            for c in range(self.board_num):
-                piece = self.board[r][c]
-                if piece != '.':
-                    if piece == 'b':
+        for r in range(self.board_size):
+            for c in range(self.board_size):
+                piece = self.connectNGame.board[r][c]
+                if piece != ConnectNGame.AVAILABLE:
+                    if piece == ConnectNGame.PLAYER_A:
                         color = (0, 0, 0)
                     else:
                         color = (255, 255, 255)

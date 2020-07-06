@@ -18,7 +18,7 @@ class ConnectNGame:
         self.N = N
         self.board_size = board_size
         self.board = [[ConnectNGame.AVAILABLE] * board_size for _ in range(board_size)]
-        self.gameEnded = False
+        self.gameOver = False
         self.gameResult = None
         self.currentPlayer = ConnectNGame.PLAYER_A
         self.remainingPosNum = board_size * board_size
@@ -36,11 +36,11 @@ class ConnectNGame:
         self.actionStack.append((r, c))
         self.remainingPosNum -= 1
         if self.checkWin(r, c):
-            self.gameEnded = True
+            self.gameOver = True
             self.gameResult = self.currentPlayer
             return self.currentPlayer
         if self.remainingPosNum == 0:
-            self.gameEnded = True
+            self.gameOver = True
             self.gameResult = ConnectNGame.RESULT_TIE
             return ConnectNGame.RESULT_TIE
         self.currentPlayer *= -1
@@ -52,7 +52,7 @@ class ConnectNGame:
             self.board[r][c] = ConnectNGame.AVAILABLE
             self.currentPlayer = ConnectNGame.PLAYER_A if len(self.actionStack) % 2 == 0 else ConnectNGame.PLAYER_B
             self.remainingPosNum += 1
-            self.gameEnded = False
+            self.gameOver = False
             self.gameResult = None
         else:
             raise Exception('No lastAction')
@@ -99,7 +99,7 @@ class ConnectNGame:
         return tuple([tuple(tic_tac_toe.board[i]) for i in range(3)])
 
 
-    def check_piece(self, r, c):
+    def checkAction(self, r, c):
         return self.board[r][c] == ConnectNGame.AVAILABLE
 
 # def minimax(game: ConnectNGame, isMaxPlayer: bool) -> int:
@@ -142,13 +142,13 @@ def minimax(game: ConnectNGame, isMaxPlayer: bool) -> int:
     :param isMaxPlayer:
     :return: 1, 0, -1
     """
-    assert not game.gameEnded
+    assert not game.gameOver
     if isMaxPlayer:
         ret = -math.inf
         for pos in game.getAvailablePositions():
             result = game.action(*pos)
             if result is None:
-                assert not game.gameEnded
+                assert not game.gameOver
                 result = minimax(game, not isMaxPlayer)
             game.undo()
             ret = max(ret, result)
@@ -160,7 +160,7 @@ def minimax(game: ConnectNGame, isMaxPlayer: bool) -> int:
         for pos in game.getAvailablePositions():
             result = game.action(*pos)
             if result is None:
-                assert not game.gameEnded
+                assert not game.gameOver
                 result = minimax(game, not isMaxPlayer)
             game.undo()
             ret = min(ret, result)
@@ -177,13 +177,13 @@ def minimax_dp(game: ConnectNGame, gameState) -> int:
     :param isMaxPlayer:
     :return: 1, 0, -1
     """
-    assert not game.gameEnded
+    assert not game.gameOver
     if game.currentPlayer == ConnectNGame.PLAYER_A:
         ret = -math.inf
         for pos in game.getAvailablePositions():
             result = game.action(*pos)
             if result is None:
-                assert not game.gameEnded
+                assert not game.gameOver
                 result = minimax_dp(game, game.getStatus())
             game.undo()
             ret = max(ret, result)
@@ -195,7 +195,7 @@ def minimax_dp(game: ConnectNGame, gameState) -> int:
         for pos in game.getAvailablePositions():
             result = game.action(*pos)
             if result is None:
-                assert not game.gameEnded
+                assert not game.gameOver
                 result = minimax_dp(game, game.getStatus())
             game.undo()
             ret = min(ret, result)

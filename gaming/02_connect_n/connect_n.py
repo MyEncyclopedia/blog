@@ -1,8 +1,8 @@
 import copy
 import math
+from functools import lru_cache
 from typing import List, Tuple
 
-# 1. redo
 # 2. alpha beta pruning
 # dp
 class ConnectNGame:
@@ -96,6 +96,10 @@ class ConnectNGame:
     def getAvailablePositions(self) -> List[Tuple[int, int]]:
         return [(i,j) for i in range(self.N) for j in range(self.N) if self.board[i][j] == ConnectNGame.AVAILABLE]
 
+    def getStatus(self):
+        return tuple([tuple(tic_tac_toe.board[i]) for i in range(3)])
+
+
 
 # def minimax(game: ConnectNGame, isMaxPlayer: bool) -> int:
 #     """
@@ -163,8 +167,43 @@ def minimax(game: ConnectNGame, isMaxPlayer: bool) -> int:
                 return -1
         return ret
 
+
+@lru_cache(maxsize=None)
+def minimax_dp(game: ConnectNGame) -> int:
+    """
+
+    :param game:
+    :param isMaxPlayer:
+    :return: 1, 0, -1
+    """
+    assert not game.gameEnded
+    if game.currentPlayer == ConnectNGame.PLAYER_A:
+        ret = -math.inf
+        for pos in game.getAvailablePositions():
+            result = game.action(*pos)
+            if result is None:
+                assert not game.gameEnded
+                result = minimax_dp(game)
+            game.undo()
+            ret = max(ret, result)
+            if ret == 1:
+                return 1
+        return ret
+    else:
+        ret = math.inf
+        for pos in game.getAvailablePositions():
+            result = game.action(*pos)
+            if result is None:
+                assert not game.gameEnded
+                result = minimax_dp(game)
+            game.undo()
+            ret = min(ret, result)
+            if ret == -1:
+                return -1
+        return ret
+
 if __name__ == '__main__':
     tic_tac_toe = ConnectNGame(N=3, board_size=3)
-    # print(recurse(tic_tac_toe))
     print(minimax(tic_tac_toe, True))
+    print(minimax_dp(tic_tac_toe))
 

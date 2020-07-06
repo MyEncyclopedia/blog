@@ -99,6 +99,8 @@ class ConnectNGame:
         return tuple([tuple(tic_tac_toe.board[i]) for i in range(3)])
 
 
+    def check_piece(self, r, c):
+        return self.board[r][c] == ConnectNGame.AVAILABLE
 
 # def minimax(game: ConnectNGame, isMaxPlayer: bool) -> int:
 #     """

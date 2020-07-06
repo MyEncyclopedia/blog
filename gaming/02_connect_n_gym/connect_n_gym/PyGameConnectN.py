@@ -4,17 +4,13 @@ from connect_n_gym.connect_n import ConnectNGame
 
 
 class PyGameBoard:
-    # PIECE_B = 'b'
-    # PIECE_W = 'w'
 
-    def __init__(self, board_size=5, connect_num=3):
+    def __init__(self, board_size=3, connect_num=3):
         self.grid_size = 10
         self.start_x, self.start_y = 30, 50
         self.edge_size = self.grid_size / 2
         self.board_size = board_size
         self.connectNGame = ConnectNGame(N=connect_num, board_size=board_size)
-        self.piece = ConnectNGame.PLAYER_A
-        # self.winner = None
         self.action = None
 
         pygame.init()
@@ -62,12 +58,9 @@ class PyGameBoard:
 
         self.draw(self.screen)
         if self.connectNGame.gameOver:
-            self.screen.blit(self.font.render("{0} Win".format("Black" if self.winner == 'b' else "White"), True, (0, 0, 0)), (500, 10))
+            self.screen.blit(self.font.render("{0} Win".format("Black" if self.connectNGame.gameResult == ConnectNGame.PLAYER_A else "White"), True, (0, 0, 0)), (500, 10))
 
         pygame.display.update()
-
-    # def available_actions(self):
-    #     return [row * self.board_num + col for row in range(self.board_num) for col in range(self.board_num) if self.board[row][col] == '.']
 
     def handle_key_event(self, e):
         origin_x = self.start_x - self.edge_size
@@ -99,12 +92,6 @@ class PyGameBoard:
                     self.action = (r, c)
                     return self.action
 
-    # def set_piece(self, r, c):
-    #     if self.board[r][c] == '.':
-    #         self.board[r][c] = self.piece
-    #         return True
-    #     return False
-    #
     def draw(self, screen):
         pygame.draw.rect(screen, (185, 122, 87),
                          [self.start_x - self.edge_size, self.start_y - self.edge_size,

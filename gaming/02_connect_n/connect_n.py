@@ -2,6 +2,9 @@ import copy
 import math
 from typing import List, Tuple
 
+# 1. redo
+# 2. alpha beta pruning
+# dp
 class ConnectNGame:
 
     PLAYER_A = 1
@@ -20,6 +23,7 @@ class ConnectNGame:
         self.gameResult = None
         self.currentPlayer = ConnectNGame.PLAYER_A
         self.remainingPosNum = board_size * board_size
+        self.actionStack = []
 
     def action(self, r: int, c: int):
         """
@@ -30,6 +34,7 @@ class ConnectNGame:
         """
         assert self.board[r][c] == ConnectNGame.AVAILABLE
         self.board[r][c] = self.currentPlayer
+        self.actionStack.append((r, c))
         self.remainingPosNum -= 1
         if self.checkWin(r, c):
             self.gameEnded = True
@@ -40,6 +45,18 @@ class ConnectNGame:
             self.gameResult = ConnectNGame.RESULT_TIE
             return ConnectNGame.RESULT_TIE
         self.currentPlayer *= -1
+
+    def undo(self):
+        if len(self.actionStack) > 0:
+            lastAction = self.actionStack.pop()
+            r, c = lastAction
+            self.board[r][c] = ConnectNGame.AVAILABLE
+            self.currentPlayer = ConnectNGame.PLAYER_A if len(self.actionStack) % 2 == 0 else ConnectNGame.PLAYER_B
+            self.remainingPosNum += 1
+            self.gameEnded = False
+            self.gameResult = None
+        else:
+            raise Exception('No lastAction')
 
     def checkWin(self, r: int, c: int) -> bool:
         north = self.getConnectedNum(r, c, -1, 0)
@@ -80,18 +97,38 @@ class ConnectNGame:
         return [(i,j) for i in range(self.N) for j in range(self.N) if self.board[i][j] == ConnectNGame.AVAILABLE]
 
 
-def recurse(game: ConnectNGame):
-    assert not game.gameEnded
-    finalResult = False
-    for pos in game.getAvailablePositions():
-        result = game.action(*pos)
-        if result is None:
-            gameClone = copy.deepcopy(game)
-            result = not recurse(gameClone)
-        finalResult = finalResult or result
-        if finalResult == True:
-            return True
-    return finalResult
+# def minimax(game: ConnectNGame, isMaxPlayer: bool) -> int:
+#     """
+#
+#     :param game:
+#     :param isMaxPlayer:
+#     :return: 1, 0, -1
+#     """
+#     assert not game.gameEnded
+#     if isMaxPlayer:
+#         ret = - math.inf
+#         for pos in game.getAvailablePositions():
+#             gameClone = copy.deepcopy(game)
+#             result = gameClone.action(*pos)
+#             if result is None:
+#                 assert not gameClone.gameEnded
+#                 result = minimax(gameClone, not isMaxPlayer)
+#             ret = max(ret, result)
+#             if ret == 1:
+#                 return 1
+#         return ret
+#     else:
+#         ret = math.inf
+#         for pos in game.getAvailablePositions():
+#             gameClone = copy.deepcopy(game)
+#             result = gameClone.action(*pos)
+#             if result is None:
+#                 assert not gameClone.gameEnded
+#                 result = minimax(gameClone, not isMaxPlayer)
+#             ret = min(ret, result)
+#             if ret == -1:
+#                 return -1
+#         return ret
 
 def minimax(game: ConnectNGame, isMaxPlayer: bool) -> int:
     """
@@ -102,13 +139,13 @@ def minimax(game: ConnectNGame, isMaxPlayer: bool) -> int:
     """
     assert not game.gameEnded
     if isMaxPlayer:
-        ret = - math.inf
+        ret = -math.inf
         for pos in game.getAvailablePositions():
-            gameClone = copy.deepcopy(game)
-            result = gameClone.action(*pos)
+            result = game.action(*pos)
             if result is None:
-                assert not gameClone.gameEnded
-                result = minimax(gameClone, not isMaxPlayer)
+                assert not game.gameEnded
+                result = minimax(game, not isMaxPlayer)
+            game.undo()
             ret = max(ret, result)
             if ret == 1:
                 return 1
@@ -116,16 +153,15 @@ def minimax(game: ConnectNGame, isMaxPlayer: bool) -> int:
     else:
         ret = math.inf
         for pos in game.getAvailablePositions():
-            gameClone = copy.deepcopy(game)
-            result = gameClone.action(*pos)
+            result = game.action(*pos)
             if result is None:
-                assert not gameClone.gameEnded
-                result = minimax(gameClone, not isMaxPlayer)
+                assert not game.gameEnded
+                result = minimax(game, not isMaxPlayer)
+            game.undo()
             ret = min(ret, result)
             if ret == -1:
                 return -1
         return ret
-
 
 if __name__ == '__main__':
     tic_tac_toe = ConnectNGame(N=3, board_size=3)

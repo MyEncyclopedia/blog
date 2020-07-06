@@ -105,39 +105,6 @@ class ConnectNGame:
     def checkAction(self, r, c):
         return self.board[r][c] == ConnectNGame.AVAILABLE
 
-# def minimax(game: ConnectNGame, isMaxPlayer: bool) -> int:
-#     """
-#
-#     :param game:
-#     :param isMaxPlayer:
-#     :return: 1, 0, -1
-#     """
-#     assert not game.gameEnded
-#     if isMaxPlayer:
-#         ret = - math.inf
-#         for pos in game.getAvailablePositions():
-#             gameClone = copy.deepcopy(game)
-#             result = gameClone.action(*pos)
-#             if result is None:
-#                 assert not gameClone.gameEnded
-#                 result = minimax(gameClone, not isMaxPlayer)
-#             ret = max(ret, result)
-#             if ret == 1:
-#                 return 1
-#         return ret
-#     else:
-#         ret = math.inf
-#         for pos in game.getAvailablePositions():
-#             gameClone = copy.deepcopy(game)
-#             result = gameClone.action(*pos)
-#             if result is None:
-#                 assert not gameClone.gameEnded
-#                 result = minimax(gameClone, not isMaxPlayer)
-#             ret = min(ret, result)
-#             if ret == -1:
-#                 return -1
-#         return ret
-
 def minimax(game: ConnectNGame, isMaxPlayer: bool) -> int:
     """
 

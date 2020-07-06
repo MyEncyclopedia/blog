@@ -4,7 +4,6 @@ from functools import lru_cache
 from typing import List, Tuple
 
 # 2. alpha beta pruning
-# dp
 class ConnectNGame:
 
     PLAYER_A = 1

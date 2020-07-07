@@ -28,7 +28,8 @@ def lru_cache_selected(*decorator_args, **decorator_kwargs):
         # args_list = f_arg_spec.args
 
         def filter_cached_args(*func_args):
-            return [func_args[i] for i in range(len(func_args)) if f_arg_spec.args[i] not in excludes]
+            args_len = len(func_args) - 0 if f_arg_spec.defaults is None else len(f_arg_spec.defaults)
+            return [func_args[i] for i in range(args_len) if f_arg_spec.args[i] not in excludes]
 
         @lru_decorator
         def helper(box: _Equals, *effective_args, **effective_kwargs):
@@ -57,10 +58,19 @@ def demo_excludes_kwarg(x: int, y:int = None) -> int:
     return x + 1
 
 @lru_cache_selected(excludes=['y', 'z'])
-def demo_excludes_arg_and_kwarg(x: int, y, z:int = None) -> int:
+def demo_excludes_arg_and_kwarg(x: int, y:int, z:int = None) -> int:
     print(f'in demo_excludes_arg_and_kwarg {x}, {y}, {z}')
     return x + 1
 
+@lru_cache_selected(excludes=['y', 'z'])
+def demo_excludes_all_mixed(x: int, y:int, z:int = None, l:int = None) -> int:
+    print(f'in demo_excludes_arg_and_kwarg {x}, {y}, {z}, {l}')
+    return x + l
+
+@lru_cache_selected(excludes=['y', 'z'])
+def demo_excludes_disorder(x: int, z:int, y:int = None, l:int = None) -> int:
+    print(f'in demo_excludes_disorder {x}, {y}, {z}, {l}')
+    return x + l
 
 if __name__ == "__main__":
     # print(demo_no_excludes(1, 2))
@@ -71,7 +81,10 @@ if __name__ == "__main__":
     # print(demo_excludes_kwarg(3, 2))
     # print(demo_excludes_kwarg(1, 3))
 
-    print(demo_excludes_arg_and_kwarg(1, 2, 3))
-    print(demo_excludes_arg_and_kwarg(1, 3, 4))
-    print(demo_excludes_arg_and_kwarg(2, 3, 4))
+    # print(demo_excludes_arg_and_kwarg(1, 2, 3))
+    # print(demo_excludes_arg_and_kwarg(1, 3, 4))
+    # print(demo_excludes_arg_and_kwarg(2, 3, 4))
 
+    print(demo_excludes_all_mixed(1, 2, 3, 10))
+    print(demo_excludes_all_mixed(1, 3, 4, 10))
+    print(demo_excludes_all_mixed(2, 3, 4, 10))

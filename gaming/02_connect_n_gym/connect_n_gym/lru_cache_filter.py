@@ -1,9 +1,5 @@
-import inspect
-import uuid
-
 
 # todo
-# multiple usage?
 # kwargs mix args test
 def lru_cache_selected(*decorator_args, **decorator_kwargs):
     # print(*decorator_args)
@@ -26,6 +22,7 @@ def lru_cache_selected(*decorator_args, **decorator_kwargs):
     lru_decorator = functools.lru_cache(*decorator_args, **decorator_kwargs)
 
     def decorator(f):
+        import inspect
         f_arg_spec = inspect.getfullargspec(f)
         # len_func_args = len(f_arg_spec.args) - len(f_arg_spec.defaults)
         # args_list = f_arg_spec.args
@@ -49,65 +46,32 @@ def lru_cache_selected(*decorator_args, **decorator_kwargs):
 
     return decorator
 
-d = [[0] * 5 for i in range(6)]
+@lru_cache_selected(excludes=[])
+def demo_no_excludes(x: int, y:int) -> int:
+    print(f'in demo_no_excludes {x}, {y}')
+    return x + 1
 
+@lru_cache_selected(excludes=['y'])
+def demo_excludes_kwarg(x: int, y:int = None) -> int:
+    print(f'in demo_excludes_kwarg {x}, {y}')
+    return x + 1
 
-# @lru_cache_selected(maxsize=None, excludes=['ex1', 'ex2'])
-def d2(x, ex1, ex2=None, y=None):
-    print(f'x={x}, y={y}, ex1={ex1}, ex2={ex2}')
-    if x == 0 or y == 0:
-        d[x][y] = x + y
-        return d[x][y]
-    if d[x][y] == 0:
-        d2(x-1, str(uuid.uuid4()), str(uuid.uuid4()), y)
-        d2(x, str(uuid.uuid4()), str(uuid.uuid4()), y-1)
-        d[x][y] = d[x-1][y] * d[x][y-1]
-        return d[x][y]
-    else:
-        return d[x][y]
-
+@lru_cache_selected(excludes=['y', 'z'])
+def demo_excludes_arg_and_kwarg(x: int, y, z:int = None) -> int:
+    print(f'in demo_excludes_arg_and_kwarg {x}, {y}, {z}')
+    return x + 1
 
 
 if __name__ == "__main__":
-    d2(5, str(uuid.uuid4()), str(uuid.uuid4()), 4)
+    # print(demo_no_excludes(1, 2))
+    # print(demo_no_excludes(3, 2))
+    # print(demo_no_excludes(1, 2))
+    #
+    # print(demo_excludes_kwarg(1, 2))
+    # print(demo_excludes_kwarg(3, 2))
+    # print(demo_excludes_kwarg(1, 3))
 
+    print(demo_excludes_arg_and_kwarg(1, 2, 3))
+    print(demo_excludes_arg_and_kwarg(1, 3, 4))
+    print(demo_excludes_arg_and_kwarg(2, 3, 4))
 
-# Note: this impl has constraint that all params in excludes must be named args (in func_kwargs)
-# def lru_cache_selected_(*decorator_args, **decorator_kwargs):
-#     # print(*decorator_args)
-#     excludes = decorator_kwargs.get('excludes', [])
-#     decorator_kwargs.pop('excludes')
-#
-#     class _Equals(object):
-#
-#         def __init__(self, **exc_kwargs):
-#             self.exc = exc_kwargs
-#
-#         def __eq__(self, other):
-#             return True
-#
-#         def __hash__(self):
-#             return 0
-#
-#     import functools
-#     lru_decorator = functools.lru_cache(*decorator_args, **decorator_kwargs)
-#
-#     def decorator(f):
-#         b = inspect.getfullargspec(f)
-#         print(b)
-#         @lru_decorator
-#         def helper(box: _Equals, *func_args, **cached_kwargs):
-#             cached_kwargs.update(box.exc)
-#             return f(*func_args, **cached_kwargs)
-#
-#         @functools.wraps(f)
-#         def function(*func_args, **func_kwargs):
-#             # all params in excludes must be named args (in func_kwargs)
-#             exclude_kwargs = {k: v for k, v in func_kwargs.items() if k in excludes}
-#             cached_kwargs = {k: v for k, v in func_kwargs.items() if k not in excludes}
-#             box = _Equals(**exclude_kwargs)
-#             return helper(box, *func_args, **cached_kwargs)
-#
-#         return function
-#
-#     return decorator

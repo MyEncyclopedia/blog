@@ -37,6 +37,7 @@ def lru_cache_selected(*decorator_args, **decorator_kwargs):
 
         @functools.wraps(f)
         def function(*func_args, **func_kwargs):
+            print(f_arg_spec)
             exclude_kwargs = {}
             effective_args = filter_cached_args(*func_args)
             effective_kwargs = {k: v for k, v in func_kwargs.items() if k not in excludes}
@@ -48,29 +49,29 @@ def lru_cache_selected(*decorator_args, **decorator_kwargs):
     return decorator
 
 @lru_cache_selected(excludes=[])
-def demo_no_excludes(x: int, y:int) -> int:
+def demo_no_excludes(x: str, y:str) -> str:
     print(f'in demo_no_excludes {x}, {y}')
-    return x + 1
+    return x
 
 @lru_cache_selected(excludes=['y'])
-def demo_excludes_kwarg(x: int, y:int = None) -> int:
+def demo_excludes_kwarg(x: str, y:str = None) -> str:
     print(f'in demo_excludes_kwarg {x}, {y}')
-    return x + 1
+    return x
 
 @lru_cache_selected(excludes=['y', 'z'])
-def demo_excludes_arg_and_kwarg(x: int, y:int, z:int = None) -> int:
+def demo_excludes_arg_and_kwarg(x: str, y:str, z:str = None) -> str:
     print(f'in demo_excludes_arg_and_kwarg {x}, {y}, {z}')
-    return x + 1
+    return x
 
 @lru_cache_selected(excludes=['y', 'z'])
-def demo_excludes_all_mixed(x: int, y:int, z:int = None, l:int = None) -> int:
+def demo_excludes_all_mixed(x: str, y:str, z:str = None, l:str = None) -> str:
     print(f'in demo_excludes_arg_and_kwarg {x}, {y}, {z}, {l}')
-    return x + l
+    return x
 
 @lru_cache_selected(excludes=['y', 'z'])
-def demo_excludes_disorder(x: int, z:int, y:int = None, l:int = None) -> int:
+def demo_excludes_disorder(x: str, z:str, y:str = None, l:str = None) -> str:
     print(f'in demo_excludes_disorder {x}, {y}, {z}, {l}')
-    return x + l
+    return x
 
 if __name__ == "__main__":
     # print(demo_no_excludes(1, 2))
@@ -85,6 +86,10 @@ if __name__ == "__main__":
     # print(demo_excludes_arg_and_kwarg(1, 3, 4))
     # print(demo_excludes_arg_and_kwarg(2, 3, 4))
 
-    print(demo_excludes_all_mixed(1, 2, 3, 10))
-    print(demo_excludes_all_mixed(1, 3, 4, 10))
-    print(demo_excludes_all_mixed(2, 3, 4, 10))
+    print(demo_excludes_all_mixed("x1", "y1", "z1", "l1"))
+    print(demo_excludes_all_mixed("x1", "y1", "z1", "l1"))
+    print(demo_excludes_all_mixed("x1", "y1", "z1", "l1"))
+
+    print(demo_excludes_disorder("x1", "z1", l="l1", y="y1"))
+    print(demo_excludes_disorder("x2", "z1", l="l1", y="y1"))
+    print(demo_excludes_disorder("x2", "z1", l="l1", y="y2"))

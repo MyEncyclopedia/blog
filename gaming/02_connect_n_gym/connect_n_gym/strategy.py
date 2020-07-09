@@ -32,7 +32,7 @@ class MinimaxStrategy(Strategy):
             ret = -math.inf
             for pos in game.getAvailablePositions():
                 move = pos
-                result = game.action(*pos)
+                result = game.move(*pos)
                 if result is None:
                     assert not game.gameOver
                     result, move = self.minimax()
@@ -46,7 +46,7 @@ class MinimaxStrategy(Strategy):
             ret = math.inf
             for pos in game.getAvailablePositions():
                 move = pos
-                result = game.action(*pos)
+                result = game.move(*pos)
                 if result is None:
                     assert not game.gameOver
                     result, move = self.minimax()
@@ -73,7 +73,7 @@ class MinimaxDPStrategy(Strategy):
             ret = -math.inf
             for pos in game.getAvailablePositions():
                 move = pos
-                result = game.action(*pos)
+                result = game.move(*pos)
                 if result is None:
                     assert not game.gameOver
                     result, move = self.minimax_dp(game.getStatus())
@@ -87,7 +87,7 @@ class MinimaxDPStrategy(Strategy):
             ret = math.inf
             for pos in game.getAvailablePositions():
                 move = pos
-                result = game.action(*pos)
+                result = game.move(*pos)
                 if result is None:
                     assert not game.gameOver
                     result, move = self.minimax_dp(game.getStatus())
@@ -114,7 +114,7 @@ class AlphaBetaStrategy(Strategy):
             ret = -math.inf
             for pos in game.getAvailablePositions():
                 move = pos
-                result = game.action(*pos)
+                result = game.move(*pos)
                 if result is None:
                     assert not game.gameOver
                     result, move = self.alpha_beta(game.getStatus(), alpha, beta)
@@ -129,7 +129,7 @@ class AlphaBetaStrategy(Strategy):
             ret = math.inf
             for pos in game.getAvailablePositions():
                 move = pos
-                result = game.action(*pos)
+                result = game.move(*pos)
                 if result is None:
                     assert not game.gameOver
                     result, move = self.alpha_beta(game.getStatus(), alpha, beta)
@@ -160,7 +160,7 @@ class AlphaBetaDPStrategy(Strategy):
             ret = -math.inf
             for pos in game.getAvailablePositions():
                 move = pos
-                result = game.action(*pos)
+                result = game.move(*pos)
                 if result is None:
                     assert not game.gameOver
                     self.alphaBetaStack.append((alpha, beta))
@@ -177,7 +177,7 @@ class AlphaBetaDPStrategy(Strategy):
             ret = math.inf
             for pos in game.getAvailablePositions():
                 move = pos
-                result = game.action(*pos)
+                result = game.move(*pos)
                 if result is None:
                     assert not game.gameOver
                     self.alphaBetaStack.append((alpha, beta))

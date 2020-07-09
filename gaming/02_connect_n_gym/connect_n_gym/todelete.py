@@ -15,7 +15,7 @@ def minimax(game: ConnectNGame, isMaxPlayer: bool) -> int:
     if isMaxPlayer:
         ret = -math.inf
         for pos in game.getAvailablePositions():
-            result = game.action(*pos)
+            result = game.move(*pos)
             if result is None:
                 assert not game.gameOver
                 result = minimax(game, not isMaxPlayer)
@@ -27,7 +27,7 @@ def minimax(game: ConnectNGame, isMaxPlayer: bool) -> int:
     else:
         ret = math.inf
         for pos in game.getAvailablePositions():
-            result = game.action(*pos)
+            result = game.move(*pos)
             if result is None:
                 assert not game.gameOver
                 result = minimax(game, not isMaxPlayer)
@@ -49,7 +49,7 @@ def minimax_dp(game: ConnectNGame, gameState) -> int:
     if game.currentPlayer == ConnectNGame.PLAYER_A:
         ret = -math.inf
         for pos in game.getAvailablePositions():
-            result = game.action(*pos)
+            result = game.move(*pos)
             if result is None:
                 assert not game.gameOver
                 result = minimax_dp(game, game.getStatus())
@@ -61,7 +61,7 @@ def minimax_dp(game: ConnectNGame, gameState) -> int:
     else:
         ret = math.inf
         for pos in game.getAvailablePositions():
-            result = game.action(*pos)
+            result = game.move(*pos)
             if result is None:
                 assert not game.gameOver
                 result = minimax_dp(game, game.getStatus())
@@ -77,7 +77,7 @@ def alpha_beta_dp(game: ConnectNGame, status, alpha = None, beta = None) -> int:
     if game.currentPlayer == ConnectNGame.PLAYER_A:
         ret = -math.inf
         for pos in game.getAvailablePositions():
-            result = game.action(*pos)
+            result = game.move(*pos)
             if result is None:
                 assert not game.gameOver
                 result = alpha_beta_dp(game, game.getStatus(), alpha, beta)
@@ -90,7 +90,7 @@ def alpha_beta_dp(game: ConnectNGame, status, alpha = None, beta = None) -> int:
     else:
         ret = math.inf
         for pos in game.getAvailablePositions():
-            result = game.action(*pos)
+            result = game.move(*pos)
             if result is None:
                 assert not game.gameOver
                 result = alpha_beta_dp(game, game.getStatus(), alpha, beta)
@@ -106,7 +106,7 @@ def alpha_beta(game: ConnectNGame, status, alpha = None, beta = None) -> int:
     if game.currentPlayer == ConnectNGame.PLAYER_A:
         ret = -math.inf
         for pos in game.getAvailablePositions():
-            result = game.action(*pos)
+            result = game.move(*pos)
             if result is None:
                 assert not game.gameOver
                 result = alpha_beta(game, game.getStatus(), alpha, beta)
@@ -119,7 +119,7 @@ def alpha_beta(game: ConnectNGame, status, alpha = None, beta = None) -> int:
     else:
         ret = math.inf
         for pos in game.getAvailablePositions():
-            result = game.action(*pos)
+            result = game.move(*pos)
             if result is None:
                 assert not game.gameOver
                 result = alpha_beta(game, game.getStatus(), alpha, beta)

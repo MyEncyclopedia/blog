@@ -1,3 +1,5 @@
+from typing import List, Tuple
+
 import pygame
 
 from connect_n_gym.connect_n import ConnectNGame
@@ -52,6 +54,22 @@ class PyGameBoard:
             elif e.type == pygame.MOUSEBUTTONDOWN:
                 self.handle_user_input(e)
 
+    # proxy methods
+    def move(self, r: int, c: int):
+        self.connectNGame.move(r, c)
+
+    def isGameOver(self):
+        return self.connectNGame.gameOver
+
+    def getAvailablePositions(self) -> List[Tuple[int, int]]:
+        return self.connectNGame.getAvailablePositions()
+
+    def getCurrentPlayer(self):
+        return self.connectNGame.currentPlayer
+
+    def getStatus(self):
+        return self.connectNGame.getStatus()
+
     def render(self):
         self.screen.fill((255, 255, 255))
         self.screen.blit(self.font.render("FPS: {0:.2F}".format(self.clock.get_fps()), True, (0, 0, 0)), (10, 10))
@@ -73,7 +91,7 @@ class PyGameBoard:
                 y = pos[1] - origin_y
                 r = int(y // self.grid_size)
                 c = int(x // self.grid_size)
-                if self.connectNGame.action(r, c):
+                if self.connectNGame.move(r, c):
                     pass
 
     def handle_user_input(self, e):

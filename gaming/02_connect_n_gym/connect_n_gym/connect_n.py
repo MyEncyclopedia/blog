@@ -20,7 +20,7 @@ class ConnectNGame:
         self.remainingPosNum = board_size * board_size
         self.actionStack = []
 
-    def action(self, r: int, c: int):
+    def move(self, r: int, c: int):
         """
 
         :param r:
@@ -97,6 +97,14 @@ class ConnectNGame:
 
     def checkAction(self, r, c):
         return self.board[r][c] == ConnectNGame.AVAILABLE
+
+    def drawText(self):
+        for r in range(self.N):
+            row = ''
+            for c in range(self.N):
+                row += 'O' if self.board[r][c] == ConnectNGame.PLAYER_A else 'X' if self.board[r][c] == ConnectNGame.PLAYER_B else ' '
+            print(row)
+        print()
 
 
 if __name__ == '__main__':

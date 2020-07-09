@@ -2,33 +2,44 @@
 import random
 
 from connect_n_gym.ConnectNGym import ConnectNGym
+from connect_n_gym.strategy import MinimaxDPStrategy
 
 
 class BaseAgent(object):
     def __init__(self, strategy):
         self.strategy = strategy
 
-    def act(self, state, available_actions):
+    def act(self, game, available_actions):
         return random.choice(available_actions)
 
+class StrategyAgent(object):
+    def __init__(self, strategy):
+        self.strategy = strategy
+
+    def act(self, game, available_actions):
+        s = MinimaxDPStrategy(game)
+        result, move = s.action()
+        print(f'player={game.currentPlayer} result={result}')
+        assert move in available_actions
+        return move
 
 def play():
     env = ConnectNGym()
-    agents = [BaseAgent('O'), BaseAgent('X')]
+    agents = [StrategyAgent(None), StrategyAgent(None)]
 
-    state = env.reset()
-    _, mark = state
+    game = env.reset()
     done = False
     env.show_board(False)
     agent_id = 0
     while not done:
         available_actions = env.get_available_actions()
         agent = agents[agent_id]
-        action = agent.act(state, available_actions)
-        state, reward, done, info = env.step(action)
+        action = agent.act(game, available_actions)
+        game, reward, done, info = env.step(action)
         env.show_board(False)
 
         if done:
+            print(reward)
             break
 
         agent_id = (agent_id + 1) % 2

@@ -99,12 +99,14 @@ class ConnectNGame:
         return self.board[r][c] == ConnectNGame.AVAILABLE
 
     def drawText(self):
+        print('')
+        print('------')
         for r in range(self.N):
             row = ''
             for c in range(self.N):
                 row += 'O' if self.board[r][c] == ConnectNGame.PLAYER_A else 'X' if self.board[r][c] == ConnectNGame.PLAYER_B else ' '
             print(row)
-        print()
+        print('------')
 
 
 if __name__ == '__main__':

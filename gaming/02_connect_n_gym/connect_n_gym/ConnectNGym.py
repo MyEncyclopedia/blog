@@ -1,3 +1,5 @@
+import copy
+
 import gym
 from gym import spaces
 
@@ -10,7 +12,7 @@ REWARD_NONE = None
 
 class ConnectNGym(gym.Env):
 
-    def __init__(self, grid_num=5, connect_num=3):
+    def __init__(self, grid_num=3, connect_num=3):
         self.grid_num = grid_num
         self.connect_num = connect_num
         self.action_space = spaces.Discrete(grid_num* grid_num)
@@ -23,7 +25,8 @@ class ConnectNGym(gym.Env):
 
     def reset(self):
         self.boardGame = PyGameBoard(board_size=self.grid_num, connect_num=self.connect_num)
-        return self.get_state()
+        # return self.get_state()
+        return copy.deepcopy(self.boardGame.connectNGame)
 
     def step(self, action):
         """Step environment by action.
@@ -50,10 +53,10 @@ class ConnectNGym(gym.Env):
         if self.boardGame.isGameOver():
             reward = result
 
-        return self.get_state(), reward, result, None
+        return copy.deepcopy(self.boardGame.connectNGame), reward, not result is None, None
 
-    def get_state(self):
-        return self.boardGame.getStatus(), self.boardGame.getCurrentPlayer()
+    # def get_state(self):
+    #     return self.boardGame.getStatus(), self.boardGame.getCurrentPlayer()
 
     def render(self, mode='human', close=False):
         self.action = self.boardGame.next_user_input()

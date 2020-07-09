@@ -56,7 +56,7 @@ class PyGameBoard:
 
     # proxy methods
     def move(self, r: int, c: int):
-        self.connectNGame.move(r, c)
+        return self.connectNGame.move(r, c)
 
     def isGameOver(self):
         return self.connectNGame.gameOver

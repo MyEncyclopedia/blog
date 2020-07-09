@@ -62,7 +62,7 @@ class MinimaxDPStrategy(Strategy):
     def action(self):
         result, move = self.minimax_dp(self.game.getStatus())
         print(f'{result} {move}')
-        return move
+        return result, move
 
     @lru_cache(maxsize=None)
     def minimax_dp(self, gameState) -> Tuple[int, Tuple[int, int]]:

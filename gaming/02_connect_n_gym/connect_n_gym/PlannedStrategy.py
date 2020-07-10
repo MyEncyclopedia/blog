@@ -1,5 +1,6 @@
 import copy
 import math
+from typing import Tuple
 
 from connect_n_gym.connect_n import ConnectNGame
 from connect_n_gym.strategy import Strategy
@@ -7,11 +8,15 @@ from connect_n_gym.strategy import Strategy
 
 class PlannedMinimaxStrategy(Strategy):
     def __init__(self, game):
-        self.game = copy.deepcopy(game)
         super().__init__()
-        self.minimax()
+        self.game = copy.deepcopy(game)
+        self.dpMap = {}
+        self.result = self.minimax()
+        print(self.result)
 
-    def action(self, game):
+    def action(self, game) -> Tuple[int, Tuple[int, int]]:
+        # self.game = copy.deepcopy(game)
+
         self.dpMap = {}
 
         return result
@@ -33,9 +38,6 @@ class PlannedMinimaxStrategy(Strategy):
         bestMove = None
         assert not game.gameOver
         thisState = game.getStatus()
-        # if not thisState in self.nodes:
-            # self.g.node(str(thisState), stateNode(thisState))
-            # self.nodes.append(thisState)
 
         if game.currentPlayer == ConnectNGame.PLAYER_A:
             ret = -math.inf
@@ -90,3 +92,9 @@ class PlannedMinimaxStrategy(Strategy):
                 board[c][N-1-r] = s[r][c]
 
         return tuple([tuple(board[i]) for i in range(N)])
+
+
+if __name__ == '__main__':
+    connectNGame = ConnectNGame(N=5, board_size=7)
+
+    strategy = PlannedMinimaxStrategy(connectNGame)

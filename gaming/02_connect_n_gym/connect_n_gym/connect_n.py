@@ -104,7 +104,7 @@ class ConnectNGame:
         for r in range(self.N):
             row = ''
             for c in range(self.N):
-                row += 'O' if self.board[r][c] == ConnectNGame.PLAYER_A else 'X' if self.board[r][c] == ConnectNGame.PLAYER_B else ' '
+                row += 'O' if self.board[r][c] == ConnectNGame.PLAYER_A else 'X' if self.board[r][c] == ConnectNGame.PLAYER_B else '.'
             print(row)
         print('------')
 

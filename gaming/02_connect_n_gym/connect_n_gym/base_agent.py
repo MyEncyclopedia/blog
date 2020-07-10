@@ -10,6 +10,7 @@ class BaseAgent(object):
         self.strategy = strategy
 
     def act(self, game, available_actions):
+        self.game = game
         return random.choice(available_actions)
 
 class StrategyAgent(object):

@@ -2,7 +2,7 @@
 import random
 
 from connect_n_gym.ConnectNGym import ConnectNGym
-from connect_n_gym.strategy import MinimaxDPStrategy
+from connect_n_gym.strategy import MinimaxDPStrategy, MinimaxStrategy
 
 
 class BaseAgent(object):
@@ -17,9 +17,10 @@ class StrategyAgent(object):
         self.strategy = strategy
 
     def act(self, game, available_actions):
-        s = MinimaxDPStrategy(game)
+        # s = MinimaxDPStrategy(game)
+        s = MinimaxStrategy(game)
         result, move = s.action()
-        print(f'player={game.currentPlayer} result={result}')
+        # print(f'player={game.currentPlayer} result={result}')
         assert move in available_actions
         return move
 

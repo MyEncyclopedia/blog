@@ -111,6 +111,9 @@ class ConnectNGame:
 
 if __name__ == '__main__':
     tic_tac_toe = ConnectNGame(N=3, board_size=3)
+    tic_tac_toe.move(0, 0)
+    tic_tac_toe.move(1, 1)
+
     # print(minimax(tic_tac_toe, True))
     # print(minimax_dp(tic_tac_toe, tic_tac_toe.getStatus()))
     # print(alpha_beta(tic_tac_toe, tic_tac_toe.getStatus(), -math.inf, math.inf))

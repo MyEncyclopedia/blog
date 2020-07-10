@@ -1,5 +1,7 @@
 import copy
 import math
+import os
+import sys
 from abc import ABC, abstractmethod
 from functools import lru_cache
 from typing import Tuple
@@ -14,7 +16,7 @@ class Strategy(ABC):
         super().__init__()
 
     @abstractmethod
-    def action(self):
+    def action(self, game):
         pass
 
 
@@ -188,7 +190,13 @@ class AlphaBetaDPStrategy(Strategy):
             return ret, bestMove
 
 if __name__ == '__main__':
-    tic_tac_toe = ConnectNGame(N=3, board_size=3)
+    tic_tac_toe = ConnectNGame(N=5, board_size=7)
+    # strategy = MinimaxDPStrategy(tic_tac_toe)
+    strategy = AlphaBetaDPStrategy(tic_tac_toe)
+    print(strategy.action())
+    sys.exit(1)
+
+    tic_tac_toe = ConnectNGame(N=5, board_size=5)
     # tic_tac_toe.move(0, 0)
     # tic_tac_toe.move(1, 1)
     # tic_tac_toe.move(1, 2)

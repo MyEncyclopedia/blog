@@ -89,10 +89,10 @@ class ConnectNGame:
         return result
 
     def getAvailablePositions(self) -> List[Tuple[int, int]]:
-        return [(i,j) for i in range(self.N) for j in range(self.N) if self.board[i][j] == ConnectNGame.AVAILABLE]
+        return [(i,j) for i in range(self.board_size) for j in range(self.board_size) if self.board[i][j] == ConnectNGame.AVAILABLE]
 
     def getStatus(self):
-        return tuple([tuple(self.board[i]) for i in range(3)])
+        return tuple([tuple(self.board[i]) for i in range(self.board_size)])
 
 
     def checkAction(self, r, c):

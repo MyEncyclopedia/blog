@@ -7,7 +7,7 @@ from connect_n_gym.strategy import Strategy
 
 
 class PlannedMinimaxStrategy(Strategy):
-    def __init__(self, game):
+    def __init__(self, game: ConnectNGame):
         super().__init__()
         self.game = copy.deepcopy(game)
         self.dpMap = {}
@@ -15,11 +15,28 @@ class PlannedMinimaxStrategy(Strategy):
         print(self.result)
 
     def action(self, game) -> Tuple[int, Tuple[int, int]]:
-        # self.game = copy.deepcopy(game)
-
-        self.dpMap = {}
-
-        return result
+        bestMove = None
+        assert not game.gameOver
+        if game.currentPlayer == ConnectNGame.PLAYER_A:
+            ret = -math.inf
+            for pos in game.getAvailablePositions():
+                move = pos
+                game.move(*pos)
+                result, _ = self.dpMap[game.getStatus()]
+                game.undo()
+                ret = max(ret, result)
+                bestMove = move if ret == result else bestMove
+            return ret, bestMove
+        else:
+            ret = math.inf
+            for pos in game.getAvailablePositions():
+                move = pos
+                game.move(*pos)
+                result, _ = self.dpMap[game.getStatus()]
+                game.undo()
+                ret = min(ret, result)
+                bestMove = move if ret == result else bestMove
+            return ret, bestMove
 
     def updateDP(self, status, result):
         similarStates = self.similarStatus(status)
@@ -95,6 +112,6 @@ class PlannedMinimaxStrategy(Strategy):
 
 
 if __name__ == '__main__':
-    connectNGame = ConnectNGame(N=4, board_size=5)
+    connectNGame = ConnectNGame(N=4, board_size=4)
 
     strategy = PlannedMinimaxStrategy(connectNGame)

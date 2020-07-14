@@ -15,12 +15,12 @@ class Strategy(ABC):
         super().__init__()
 
     @abstractmethod
-    def action(self, game) -> Tuple[int, Tuple[int, int]]:
+    def action(self, game: ConnectNGame) -> Tuple[int, Tuple[int, int]]:
         pass
 
 
 class MinimaxStrategy(Strategy):
-    def action(self, game) -> Tuple[int, Tuple[int, int]]:
+    def action(self, game: ConnectNGame) -> Tuple[int, Tuple[int, int]]:
         self.game = copy.deepcopy(game)
         result, move = self.minimax()
         return result, move
@@ -60,7 +60,7 @@ class MinimaxStrategy(Strategy):
 
 
 class MinimaxDPStrategy(Strategy):
-    def action(self, game) -> Tuple[int, Tuple[int, int]]:
+    def action(self, game: ConnectNGame) -> Tuple[int, Tuple[int, int]]:
         self.game = game
         result, move = self.minimax_dp(self.game.getStatus())
         return result, move
@@ -191,26 +191,14 @@ class AlphaBetaDPStrategy(Strategy):
             return ret, bestMove
 
 if __name__ == '__main__':
-    tic_tac_toe = ConnectNGame(N=5, board_size=7)
-    # strategy = MinimaxDPStrategy(tic_tac_toe)
-    strategy = AlphaBetaDPStrategy(tic_tac_toe)
-    print(strategy.action())
-    sys.exit(1)
-
-    tic_tac_toe = ConnectNGame(N=5, board_size=5)
-    # tic_tac_toe.move(0, 0)
-    # tic_tac_toe.move(1, 1)
-    # tic_tac_toe.move(1, 2)
-    # tic_tac_toe.move(1, 0)
-    # tic_tac_toe.move(0, 1)
-    # tic_tac_toe.drawText()
+    tic_tac_toe = ConnectNGame(N=3, board_size=3)
     # strategy1 = MinimaxDPStrategy(tic_tac_toe)
     # strategy2 = AlphaBetaStrategy(tic_tac_toe)
     # strategy3 = AlphaBetaDPStrategy(tic_tac_toe)
 
     while not tic_tac_toe.gameOver:
-        strategy = MinimaxStrategy(tic_tac_toe)
-        r, action = strategy.action()
+        strategy = MinimaxStrategy()
+        r, action = strategy.action(tic_tac_toe)
         # print(f'{tic_tac_toe.getStatus()} [{r}] : {action}')
         tic_tac_toe.move(action[0], action[1])
         tic_tac_toe.drawText()

@@ -12,35 +12,27 @@ def run(N: int) -> bool:
 		if i == 0:
 			rnd = random.randint(0, N-1)
 			print(f'{i} choose1 {pos[rnd]}')
-			swap(rnd, N-1)
+			swap(rnd, 0)
 		else:
 			if pos[i] == i:
-				print(f'{i} choose2 {i}')
-				print('hit')
-				swap(i, N-i-1)
+				pass
 			else:
 				# remaining
-				rnd = random.randint(0, N-i-1)
+				rnd = random.randint(i, N-1)
 				print(f'{i} choose3 {pos[rnd]}')
-				swap(rnd, N-i-1)
+				swap(rnd, i)
 		print(f'{i} => {pos}')
-	return pos[0] == N-1
+	return pos[N-1] == N-1
 
 
 if __name__ == "__main__":
-	N = 4
+	N = 5
 	ret = {True: 0, False: 0}
-	for _ in range(500):
+	for _ in range(1000):
 		result = run(N)
-		# print(result)
+		print(f'{result}\n')
 		ret[result] += 1
 
 	print(f'{ret}')
-
-	# ret = {0: 0, 1:0, 2:0, 3:0}
-	# for _ in range(1000):
-	# 	ret[random.randint(0, 3)] += 1
-	# print(ret)
-
 
 
